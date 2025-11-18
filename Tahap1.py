@@ -51,24 +51,67 @@ def fetch_movies(query: str, timeout=8):
         if not isinstance(item, dict):
             normalized.append({"raw": item})
             continue
-            
+
+        # Title & Year
         title = item.get("title") or item.get("name") or item.get("original_title") or ""
-        year = item.get("original_release_year") or item.get("year") or item.get("release_year") or item.get("release_date", "") 
+        year = (
+            item.get("original_release_year")
+            or item.get("year")
+            or item.get("release_year")
+            or item.get("release_date", "")
+        )
         if isinstance(year, str) and len(year) >= 4:
             year = year[:4]
-            
-        poster = item.get("poster") or item.get("poster_url") or item.get("thumbnail") or item.get("image") or item.get("poster_path") or ""
-        overview = item.get("overview") or item.get("short_description") or item.get("description") or item.get("plot") or ""
-        link = item.get("url") or item.get("imdb_url") or item.get("original_url") or item.get("jw_url") or ""
-        
-        normalized.append({
-            "title": title,
-            "year": year,
-            "poster": poster,
-            "overview": overview,
-            "link": link,
-            "raw": item
-        })
+
+        # === FIX POSTER (Support list + fix https) ===
+        poster = (
+            item.get("poster")
+            or item.get("poster_url")
+            or item.get("photo_url")
+            or item.get("thumbnail")
+            or item.get("image")
+            or item.get("poster_path")
+            or ""
+        )
+
+        # Jika poster berupa list → ambil elemen pertama
+        if isinstance(poster, list) and len(poster) > 0:
+            poster = poster[0]
+
+        # Fix URL tanpa https
+        if isinstance(poster, str) and poster.startswith("//"):
+            poster = "https:" + poster
+
+        # Jika bukan string → kosongkan
+        if not isinstance(poster, str):
+            poster = ""
+
+        overview = (
+            item.get("overview")
+            or item.get("short_description")
+            or item.get("description")
+            or item.get("plot")
+            or ""
+        )
+
+        link = (
+            item.get("url")
+            or item.get("imdb_url")
+            or item.get("original_url")
+            or item.get("jw_url")
+            or ""
+        )
+
+        normalized.append(
+            {
+                "title": title,
+                "year": year,
+                "poster": poster,
+                "overview": overview,
+                "link": link,
+                "raw": item,
+            }
+        )
     return normalized
 
 # ---- UI ----
@@ -110,20 +153,21 @@ if search_button or (search_query and st.session_state.get("last_query") != sear
                         poster = item.get("poster") or ""
                         link = item.get("link") or ""
                         
-                        if poster and poster.startswith("//"):
-                            poster = "https:" + poster
-                            
+                        # === FIX DISPLAY IMAGE (NO MORE WARNING) ===
                         if poster:
                             try:
-                                st.image(poster, use_column_width=True)
-                            except Exception:
+                                st.image(poster, use_container_width=True)
+                            except:
                                 st.write("(gambar error)")
-                                
+
+                        # Judul
                         st.markdown(f"**{title}** {f'({year})' if year else ''}")
-                        
+
+                        # Sinopsis
                         if overview:
                             st.caption(overview if len(overview) < 200 else overview[:197] + "...")
-                            
+
+                        # Link detail
                         if link:
                             if link.startswith("/"):
                                 possible = "https://www.imdb.com" + link
@@ -131,6 +175,7 @@ if search_button or (search_query and st.session_state.get("last_query") != sear
                                 possible = link
                             st.markdown(f"[📖 Lihat detail]({possible})")
 
+                        # Raw JSON
                         with st.expander("Lihat data lengkap"):
                             st.json(item.get("raw"))
 
