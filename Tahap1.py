@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import requests
 from urllib.parse import quote_plus
@@ -13,6 +12,7 @@ if "genre" not in st.session_state:
 
 if "rating" not in st.session_state:
     st.session_state.rating = None
+
 
 @st.cache_data(ttl=300)
 def fetch_movies(query: str, timeout=8):
@@ -68,7 +68,6 @@ def fetch_movies(query: str, timeout=8):
         if isinstance(year, str) and len(year) >= 4:
             year = year[:4]
 
-        # === FIX POSTER ===
         poster = (
             item.get("poster")
             or item.get("poster_url")
@@ -79,7 +78,7 @@ def fetch_movies(query: str, timeout=8):
             or ""
         )
 
-        if isinstance(poster, list) and len(poster) > 0:
+        if isinstance(poster, list) and poster:
             poster = poster[0]
         if isinstance(poster, str) and poster.startswith("//"):
             poster = "https:" + poster
@@ -115,8 +114,9 @@ def fetch_movies(query: str, timeout=8):
 
     return normalized
 
+
 if st.session_state.page == "start":
-    st.title("🎬 Selamat Datang di Movie Finder")
+    st.title(" Selamat Datang di Movie Finder")
     st.markdown("Mulai pilih preferensi dulu sebelum mencari film!")
 
     genre = st.selectbox(
@@ -126,7 +126,7 @@ if st.session_state.page == "start":
 
     rating = st.slider("Minimal Rating IMDb", 1, 10, 7)
 
-    start_btn = st.button("🚀 Mulai Cari Film")
+    start_btn = st.button(" Mulai Cari Film")
 
     if start_btn:
         st.session_state.genre = genre
@@ -134,15 +134,22 @@ if st.session_state.page == "start":
         st.session_state.page = "search"
         st.rerun()
 
-    st.stop()   # Agar tidak lanjut ke bawah
+    st.stop()
 
-st.title("🎬 Pencarian Film — IMDb / JustWatch API")
+
+
+back = st.button(" Kembali ke Halaman Awal")
+if back:
+    st.session_state.page = "start"
+    st.rerun()
+
+st.title(" Pencarian Film — IMDb / JustWatch API")
 st.markdown(
     f"Genre pilihan: **{st.session_state.genre}**, Minimum Rating: **{st.session_state.rating}** ⭐"
 )
 
 st.markdown("---")
-st.subheader("🔍 Cari Film Favoritmu")
+st.subheader(" Cari Film Favoritmu")
 
 col1, col2 = st.columns([3, 1])
 with col1:
@@ -220,4 +227,3 @@ if search_button or (search_query and st.session_state.get("last_query") != sear
 
 st.markdown("---")
 st.caption("WELL WELL WELL")
-
