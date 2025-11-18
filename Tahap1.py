@@ -5,9 +5,6 @@ from urllib.parse import quote_plus
 
 st.set_page_config(page_title="Cari Film (API IMDb/JustWatch)", layout="wide")
 
-# =====================================================
-# HALAMAN STATE
-# =====================================================
 if "page" not in st.session_state:
     st.session_state.page = "start"
 
@@ -17,9 +14,6 @@ if "genre" not in st.session_state:
 if "rating" not in st.session_state:
     st.session_state.rating = None
 
-# =====================================================
-# FETCH FUNCTION
-# =====================================================
 @st.cache_data(ttl=300)
 def fetch_movies(query: str, timeout=8):
     """Ambil data film dari API"""
@@ -121,9 +115,6 @@ def fetch_movies(query: str, timeout=8):
 
     return normalized
 
-# =====================================================
-# =============== HALAMAN START =======================
-# =====================================================
 if st.session_state.page == "start":
     st.title("🎬 Selamat Datang di Movie Finder")
     st.markdown("Mulai pilih preferensi dulu sebelum mencari film!")
@@ -145,10 +136,6 @@ if st.session_state.page == "start":
 
     st.stop()   # Agar tidak lanjut ke bawah
 
-
-# =====================================================
-# =============== HALAMAN SEARCH ======================
-# =====================================================
 st.title("🎬 Pencarian Film — IMDb / JustWatch API")
 st.markdown(
     f"Genre pilihan: **{st.session_state.genre}**, Minimum Rating: **{st.session_state.rating}** ⭐"
@@ -233,3 +220,4 @@ if search_button or (search_query and st.session_state.get("last_query") != sear
 
 st.markdown("---")
 st.caption("WELL WELL WELL")
+
