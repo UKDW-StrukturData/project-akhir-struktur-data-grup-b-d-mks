@@ -116,7 +116,7 @@ def fetch_movies(query: str, timeout=8):
 
 
 if st.session_state.page == "start":
-    st.title(" Selamat Datang di Movie Finder")
+    st.title(" Selamat Datang di Movie Recomender")
     st.markdown("Mulai pilih preferensi dulu sebelum mencari film!")
 
     genre = st.selectbox(
@@ -227,3 +227,4 @@ if search_button or (search_query and st.session_state.get("last_query") != sear
 
 st.markdown("---")
 st.caption("WELL WELL WELL")
+
