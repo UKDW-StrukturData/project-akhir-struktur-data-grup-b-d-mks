@@ -14,14 +14,14 @@ def fetch_movies(query: str, timeout=8):
     """Ambil data film dari API"""
     if not query:
         return []
-    
+
     q = quote_plus(query)
     url = f"https://imdb.iamidiotareyoutoo.com/justwatch?q={q}"
     headers = {
         "User-Agent": "Mozilla/5.0 (compatible; StreamlitApp/1.0)",
         "Accept": "application/json",
     }
-    
+
     try:
         resp = requests.get(url, headers=headers, timeout=timeout)
         resp.raise_for_status()
@@ -63,7 +63,7 @@ def fetch_movies(query: str, timeout=8):
         if isinstance(year, str) and len(year) >= 4:
             year = year[:4]
 
-        # === FIX POSTER (Support list + fix https) ===
+        # === FIX POSTER ===
         poster = (
             item.get("poster")
             or item.get("poster_url")
@@ -74,7 +74,7 @@ def fetch_movies(query: str, timeout=8):
             or ""
         )
 
-        # Jika poster berupa list → ambil elemen pertama
+        # Poster jika list → ambil elemen pertama
         if isinstance(poster, list) and len(poster) > 0:
             poster = poster[0]
 
@@ -109,10 +109,12 @@ def fetch_movies(query: str, timeout=8):
                 "poster": poster,
                 "overview": overview,
                 "link": link,
-                "raw": item,
+                "raw": item,  # disimpan untuk ditampilkan di expander
             }
         )
+
     return normalized
+
 
 # ---- UI ----
 st.markdown("---")
@@ -132,19 +134,19 @@ if search_button or (search_query and st.session_state.get("last_query") != sear
     else:
         with st.spinner("Lagii cariin nih..."):
             results = fetch_movies(search_query.strip())
-            
+
         if isinstance(results, dict) and results.get("_error"):
             st.error(f"Wah, error nih: {results['_error']}")
         elif not results:
             st.info("Ga ketemu filmnya, coba cari yang lain deh.")
         else:
             st.markdown(f"**Hasil untuk:** `{search_query}` — **{len(results)}** film ditemukan")
-            
+
             cards_per_row = 3
             for i in range(0, len(results), cards_per_row):
                 row = results[i:i+cards_per_row]
                 cols = st.columns(cards_per_row)
-                
+
                 for c, item in zip(cols, row):
                     with c:
                         title = item.get("title") or "—"
@@ -152,8 +154,8 @@ if search_button or (search_query and st.session_state.get("last_query") != sear
                         overview = item.get("overview") or ""
                         poster = item.get("poster") or ""
                         link = item.get("link") or ""
-                        
-                        # === FIX DISPLAY IMAGE (NO MORE WARNING) ===
+
+                        # === FIX DISPLAY IMAGE (NO WARNING) ===
                         if poster:
                             try:
                                 st.image(poster, use_container_width=True)
@@ -167,7 +169,7 @@ if search_button or (search_query and st.session_state.get("last_query") != sear
                         if overview:
                             st.caption(overview if len(overview) < 200 else overview[:197] + "...")
 
-                        # Link detail
+                        # Link detail IMDb
                         if link:
                             if link.startswith("/"):
                                 possible = "https://www.imdb.com" + link
@@ -175,9 +177,30 @@ if search_button or (search_query and st.session_state.get("last_query") != sear
                                 possible = link
                             st.markdown(f"[📖 Lihat detail]({possible})")
 
-                        # Raw JSON
+                        # === RAW JSON TANPA photo_url / backdrops ===
                         with st.expander("Lihat data lengkap"):
-                            st.json(item.get("raw"))
+                            raw = item.get("raw")
+
+                            # Buat salinan agar data asli tidak berubah
+                            clean_raw = dict(raw) if isinstance(raw, dict) else raw
+
+                            # Hapus kolom tidak perlu
+                            hidden_fields = [
+                                "photo_url",
+                                "backdrops",
+                                "poster",
+                                "poster_url",
+                                "poster_path",
+                                "thumbnail",
+                                "image",
+                            ]
+
+                            if isinstance(clean_raw, dict):
+                                for f in hidden_fields:
+                                    if f in clean_raw:
+                                        del clean_raw[f]
+
+                            st.json(clean_raw)
 
 st.markdown("---")
 st.caption("WELL WELL WELL")
