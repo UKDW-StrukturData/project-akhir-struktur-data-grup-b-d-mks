@@ -1,5 +1,4 @@
-# components.py
-# Komponen UI yang reusable
+
 
 import streamlit as st
 import json
