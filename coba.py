@@ -4,7 +4,7 @@ from pages import show_start_page, show_search_page, show_import_view
 
 # Setup page config
 st.set_page_config(
-    page_title="Movie Recommender",
+    page_title="Cari Film (API IMDb/JustWatch)",
     layout="wide",
     page_icon="🎬"
 )

@@ -2,20 +2,20 @@
 # Definisi berbagai halaman aplikasi
 
 import streamlit as st
-from components import show_popular_movies, show_import_export, show_search_history, show_movie_card
+from components import show_popular_movies, show_import_export, show_search_history, show_movie_card, show_export_section, show_import_section
 from api_service import fetch_movies
 from export_service import export_to_json, export_to_csv, generate_filename
 
 def show_start_page():
     """Halaman awal aplikasi"""
-    st.title("🎬 Pencarian Film")
+    st.title("🎬 Movie Recommender")
     st.markdown("Cari info film lengkap dengan sekali klik!")
     
     # Tampilkan film populer
     show_popular_movies()
     
     # Fitur Import/Export di halaman awal
-    show_import_export()
+    # show_import_export()
     
     st.markdown("---")
     
@@ -37,6 +37,13 @@ def show_start_page():
 def show_import_view():
     """Menampilkan data yang diimport"""
     st.title("📋 Data Film yang Diimport")
+    a, b = st.columns([1,1])
+
+    with a:
+        show_import_section()
+
+    with b:
+        show_export_section()
     
     col1, col2 = st.columns([1, 5])
     with col1:
@@ -106,7 +113,7 @@ def show_import_view():
                     st.markdown(f"🔗 [Lihat detail]({link})")
 
 def show_search_page():
-    """Halaman pencarian film"""
+    """Halaman Movie Recommender"""
     # Tombol kembali
     col_back, col_export = st.columns([1, 5])
     with col_back:
@@ -114,7 +121,7 @@ def show_search_page():
             st.session_state.page = "start"
             st.rerun()
     
-    st.title("🎬 Pencarian Film — IMDb / JustWatch API")
+    st.title("🎬 Movie Recommender")
     st.markdown("Cari info film lengkap dengan sekali klik!")
 
     # Filter dan sorting
