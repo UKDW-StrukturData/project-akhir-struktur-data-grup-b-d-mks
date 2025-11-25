@@ -136,22 +136,22 @@ def show_search_page():
     st.markdown("---")
     st.caption("WELL WELL WELL - Cari Film Lebih Mudah!")
 
-def show_filters():
-    """Menampilkan filter dan sorting"""
-    st.markdown("---")
+# def show_filters():
+#     """Menampilkan filter dan sorting"""
+#     st.markdown("---")
     
-    col_filter1, col_filter2, col_filter3 = st.columns(3)
-    with col_filter1:
-        tahun_min = st.number_input("Tahun Minimal", min_value=1900, max_value=2024, value=1990)
-    with col_filter2:
-        tahun_max = st.number_input("Tahun Maksimal", min_value=1900, max_value=2024, value=2024)
-    with col_filter3:
-        sort_by = st.selectbox(
-            "Urutkan Berdasarkan:",
-            ["Relevansi", "Tahun (Terbaru)", "Tahun (Terlama)", "Rating Tertinggi"]
-        )
+#     col_filter1, col_filter2, col_filter3 = st.columns(3)
+#     with col_filter1:
+#         tahun_min = st.number_input("Tahun Minimal", min_value=1900, max_value=2024, value=1990)
+#     with col_filter2:
+#         tahun_max = st.number_input("Tahun Maksimal", min_value=1900, max_value=2024, value=2024)
+#     with col_filter3:
+#         sort_by = st.selectbox(
+#             "Urutkan Berdasarkan:",
+#             ["Relevansi", "Tahun (Terbaru)", "Tahun (Terlama)", "Rating Tertinggi"]
+#         )
     
-    return tahun_min, tahun_max, sort_by
+#     return tahun_min, tahun_max, sort_by
 
 def show_search_form():
     """Form pencarian film"""
