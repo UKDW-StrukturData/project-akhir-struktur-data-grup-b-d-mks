@@ -17,8 +17,11 @@ def show_start_page():
     # Fitur Import/Export di halaman awal
     # show_import_export()
     
-    st.markdown("---")
+    if st.button("🚀 Mulai Cari Film", type="primary"):
+        st.session_state.page = "search"
+        st.rerun()
     
+    st.markdown("---")
     st.subheader("Cara Menggunakan:")
     st.markdown("""
     1. **Klik tombol 'Mulai Cari Film'** di bawah
@@ -27,12 +30,7 @@ def show_start_page():
     4. **Simpan/Export** hasil pencarian
     5. **Import** data film yang sudah disimpan
     """)
-    
-    st.markdown("---")
-    
-    if st.button("🚀 Mulai Cari Film", type="primary"):
-        st.session_state.page = "search"
-        st.rerun()
+
 
 def show_import_view():
     """Menampilkan data yang diimport"""
