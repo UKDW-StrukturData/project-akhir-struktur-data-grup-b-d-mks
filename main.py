@@ -6,14 +6,14 @@ from pages import show_start_page, show_search_page, show_import_view
 st.set_page_config(
     page_title="Movie Recommender",
     layout="wide",
-    page_icon="🎬"
+#    page_icon="🎬"
 )
 
 # Initialize session state
 initialize_session_state()
 
 # -------- Sidebar Menu --------
-st.sidebar.title("📂 Navigasi")
+st.sidebar.title("Navigasi")
 
 menu = st.sidebar.radio(
     "Pilih Halaman:",

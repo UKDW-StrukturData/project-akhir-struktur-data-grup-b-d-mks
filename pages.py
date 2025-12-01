@@ -8,7 +8,7 @@ from export_service import export_to_json, export_to_csv, generate_filename
 
 def show_start_page():
     """Halaman awal aplikasi"""
-    st.title("🎬 Movie Recommender")
+    st.title("Movie Recommender")
     st.markdown("Cari info film lengkap dengan sekali klik!")
     
     # Tampilkan film populer
@@ -17,7 +17,7 @@ def show_start_page():
     # Fitur Import/Export di halaman awal
     # show_import_export()
     
-    if st.button("🚀 Mulai Cari Film", type="primary"):
+    if st.button("Mulai Cari Film", type="primary"):
         st.session_state.page = "search"
         st.rerun()
     
@@ -34,7 +34,7 @@ def show_start_page():
 
 def show_import_view():
     """Menampilkan data yang diimport"""
-    st.title("📋 Data Film yang Diimport")
+    st.title("Data Film yang Diimport")
     a, b = st.columns([1,1])
 
     with a:
@@ -55,7 +55,7 @@ def show_import_view():
         st.warning("Tidak ada data yang diimport")
         return
     
-    st.success(f"🎉 Berhasil mengimport {len(imported_data)} film!")
+    st.success(f"Berhasil mengimport {len(imported_data)} film!")
     
     # Tampilkan data yang diimport
     for i, item in enumerate(imported_data):
@@ -70,9 +70,9 @@ def show_import_view():
                     try:
                         st.image(poster, use_container_width=True)
                     except:
-                        st.info("📸 Poster tidak tersedia")
+                        st.info("Poster tidak tersedia")
                 else:
-                    st.info("📸 Poster tidak tersedia")
+                    st.info("Poster tidak tersedia")
             
             with col2:
                 title = item.get("title") or "Judul tidak tersedia"
@@ -89,11 +89,11 @@ def show_import_view():
                 if jwRating:
                     with col_metrics[0]:
                         if isinstance(jwRating, (int, float)):
-                            st.metric("⭐ JW Rating", f"{jwRating:.1%}")
+                            st.metric("JW Rating", f"{jwRating:.1%}")
                 
                 if tomatometer:
                     with col_metrics[1]:
-                        st.metric("🍅 Tomatometer", f"{tomatometer}%")
+                        st.metric("Tomatometer", f"{tomatometer}%")
                 
                 if runtime:
                     with col_metrics[2]:
@@ -119,7 +119,7 @@ def show_search_page():
             st.session_state.page = "start"
             st.rerun()
     
-    st.title("🎬 Movie Recommender")
+    st.title("Movie Recommender")
     st.markdown("Cari info film lengkap dengan sekali klik!")
 
     # Filter dan sorting
@@ -153,7 +153,7 @@ def show_filters():
 
 def show_search_form():
     """Form pencarian film"""
-    st.subheader("🔍 Cari Film Favoritmu")
+    st.subheader("Cari Film Favoritmu")
 
     col1, col2 = st.columns([3,1])
     with col1:
@@ -240,14 +240,14 @@ def filter_and_sort_results(results, tahun_min, tahun_max, sort_by):
 def show_export_buttons(filtered_results, search_query):
     """Tombol export hasil pencarian"""
     if filtered_results:
-        st.subheader("📤 Export Hasil Pencarian")
+        st.subheader("Export Hasil Pencarian")
         
         col_json, col_csv = st.columns(2)
         
         with col_json:
             json_data = export_to_json(filtered_results)
             st.download_button(
-                label="💾 Download JSON",
+                label="Download JSON",
                 data=json_data,
                 file_name=f"film_{search_query}_{generate_filename('', search_query)}.json",
                 mime="application/json"

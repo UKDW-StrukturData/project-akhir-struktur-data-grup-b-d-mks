@@ -8,12 +8,12 @@ from config import POPULAR_QUERIES
 
 def show_popular_movies():
     """Menampilkan film-film populer sebagai quick access"""
-    st.subheader("🎭 Film Populer")
+    st.subheader("Film Populer")
     
     cols = st.columns(5)
     for idx, movie in enumerate(POPULAR_QUERIES):
         with cols[idx]:
-            if st.button(f"🎬 {movie}", use_container_width=True):
+            if st.button(f"{movie}", use_container_width=True):
                 st.session_state.page = "search"
                 st.session_state.last_query = movie
                 st.rerun()
@@ -141,7 +141,7 @@ def show_poster(poster):
         except Exception as e:
             st.error("❌ Gambar tidak dapat dimuat")
     else:
-        st.info("📸 Poster tidak tersedia")
+        st.info("Poster tidak tersedia")
 
 def show_favorite_button(title, year):
     """Tombol favorit"""
@@ -168,8 +168,8 @@ def show_movie_metrics(jwRating, tomatometer, tomatocertifiedFresh, runtime):
     
     with metric_cols[1]:
         if tomatometer:
-            certified = " ✅" if tomatocertifiedFresh else ""
-            st.metric("🍅", f"{tomatometer}%", label_visibility="collapsed")
+            certified = " if tomatocertifiedFresh else "
+            st.metric(f"{tomatometer}%", label_visibility="collapsed")
     
     with metric_cols[2]:
         if runtime:
