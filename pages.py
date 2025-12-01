@@ -112,12 +112,13 @@ def show_import_view():
 
 def show_search_page():
     """Halaman Movie Recommender"""
+    #Pencarian Film
     # Tombol kembali
-    col_back, col_export = st.columns([1, 5])
-    with col_back:
-        if st.button("← Kembali ke Beranda"):
-            st.session_state.page = "start"
-            st.rerun()
+    # col_back, col_export = st.columns([1, 5])
+    # with col_back:
+    #     if st.button("← Kembali ke Beranda"):
+    #         st.session_state.page = "start"
+    #         st.rerun()
     
     st.title("Movie Recommender")
     st.markdown("Cari info film lengkap dengan sekali klik!")
