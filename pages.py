@@ -210,7 +210,7 @@ def show_search_results(results, search_query):
     show_results_grid(filtered_results)
     
     st.markdown("---")
-    st.success(f"✅ Menampilkan {len(filtered_results)} hasil pencarian")
+    st.success(f"Menampilkan {len(filtered_results)} hasil pencarian")
 
 def filter_and_sort_results(results, tahun_min, tahun_max, sort_by):
     """Filter dan sort hasil pencarian"""
@@ -257,7 +257,7 @@ def show_export_buttons(filtered_results, search_query):
         with col_csv:
             csv_data = export_to_csv(filtered_results)
             st.download_button(
-                label="📊 Download CSV",
+                label="Download CSV",
                 data=csv_data,
                 file_name=f"film_{search_query}_{generate_filename('', search_query)}.csv",
                 mime="text/csv"

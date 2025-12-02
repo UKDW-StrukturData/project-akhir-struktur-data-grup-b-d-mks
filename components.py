@@ -20,7 +20,7 @@ def show_popular_movies():
 
 def show_import_export():
     """Menampilkan fitur Import/Export"""
-    st.subheader("📁 Import & Export Data")
+    st.subheader("Import & Export Data")
     
     col_import, col_export = st.columns(2)
     
@@ -32,7 +32,7 @@ def show_import_export():
 
 def show_import_section():
     """Komponen untuk import data"""
-    st.markdown("### 📥 Import Data")
+    st.markdown("### Import Data")
     uploaded_file = st.file_uploader(
         "Unggah file JSON/CSV", 
         type=['json', 'csv'],
@@ -47,9 +47,9 @@ def handle_file_upload(uploaded_file):
     try:
         if uploaded_file.type == "application/json":
             imported_data = json.load(uploaded_file)
-            st.success(f"✅ Berhasil import {len(imported_data)} film dari JSON!")
+            st.success(f"Berhasil import {len(imported_data)} film dari JSON!")
             
-            if st.button("📋 Lihat Data Import"):
+            if st.button("Lihat Data Import"):
                 st.session_state.imported_data = imported_data
                 st.session_state.page = "import_view"
                 st.rerun()
@@ -62,9 +62,9 @@ def handle_file_upload(uploaded_file):
             for row in csv_reader:
                 imported_data.append(row)
             
-            st.success(f"✅ Berhasil import {len(imported_data)} film dari CSV!")
+            st.success(f"Berhasil import {len(imported_data)} film dari CSV!")
             
-            if st.button("📋 Lihat Data Import"):
+            if st.button("Lihat Data Import"):
                 st.session_state.imported_data = imported_data
                 st.session_state.page = "import_view"
                 st.rerun()
@@ -74,12 +74,12 @@ def handle_file_upload(uploaded_file):
 
 def show_export_section():
     """Komponen untuk export data"""
-    st.markdown("### 📤 Export Data")
+    st.markdown("### Export Data")
     st.info("Fitur export tersedia setelah melakukan pencarian film")
     
     # Contoh template untuk download
     st.download_button(
-        label="📄 Download Template CSV",
+        label="Download Template CSV",
         data="title,year,runtime,jwRating,tomatometer\nAvengers,2012,143,0.95,92\n",
         file_name="template_film.csv",
         mime="text/csv"
@@ -88,7 +88,7 @@ def show_export_section():
 def show_search_history():
     """Menampilkan history pencarian"""
     if st.session_state.search_history:
-        with st.expander("📚 History Pencarian Terakhir"):
+        with st.expander("History Pencarian Terakhir"):
             hist_cols = st.columns(3)
             for idx, hist in enumerate(reversed(st.session_state.search_history[-3:])):
                 with hist_cols[idx]:
@@ -131,7 +131,7 @@ def show_movie_card(item, col):
 
         # Link detail
         if link:
-            st.markdown(f"[📖 Lihat detail]({link})")
+            st.markdown(f"[Lihat detail]({link})")
 
 def show_poster(poster):
     """Menampilkan poster film"""
@@ -139,7 +139,7 @@ def show_poster(poster):
         try:
             st.image(poster, use_container_width=True)
         except Exception as e:
-            st.error("❌ Gambar tidak dapat dimuat")
+            st.error("Gambar tidak dapat dimuat")
     else:
         st.info("Poster tidak tersedia")
 
@@ -148,9 +148,9 @@ def show_favorite_button(title, year):
     movie_id = f"{title}_{year}"
     is_favorite = movie_id in st.session_state.favorites
     
-    col_fav, col_space = st.columns([1, 5])
+    col_fav, col_space = st.columns([5, 5])
     with col_fav:
-        if st.button("❤️" if is_favorite else "🤍", key=f"fav_{movie_id}"):
+        if st.button("Telah Ditambahkan Favorite" if is_favorite else "Favorite", key=f"fav_{movie_id}"):
             if movie_id in st.session_state.favorites:
                 st.session_state.favorites.remove(movie_id)
             else:
@@ -164,7 +164,7 @@ def show_movie_metrics(jwRating, tomatometer, tomatocertifiedFresh, runtime):
     with metric_cols[0]:
         if jwRating:
             if isinstance(jwRating, (int, float)):
-                st.metric("⭐ Rating", f"{jwRating:.1%}", label_visibility="collapsed")
+                st.metric("Rating", f"{jwRating:.1%}", label_visibility="collapsed")
     
     with metric_cols[1]:
         if tomatometer:
@@ -179,7 +179,7 @@ def show_movie_metrics(jwRating, tomatometer, tomatocertifiedFresh, runtime):
 def show_streaming_offers(offers):
     """Menampilkan daftar streaming availability"""
     if offers:
-        with st.expander(f"🎬 Tersedia di ({len(offers)})"):
+        with st.expander(f"Tersedia di ({len(offers)})"):
             for offer in offers[:3]:
                 offer_name = offer.get("name") or ""
                 offer_type = offer.get("type") or ""

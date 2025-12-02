@@ -13,7 +13,7 @@ st.set_page_config(
 initialize_session_state()
 
 # -------- Sidebar Menu --------
-st.sidebar.title("📂 Navigasi")
+st.sidebar.title("Navigasi")
 
 menu = st.sidebar.radio(
     "Pilih Halaman:",
