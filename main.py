@@ -14,7 +14,7 @@ from datetime import datetime
 
 # =================KONFIGURASI=================
 # Masukkan API KEY Gemini kamu di sini
-GEMINI_API_KEY = "AIzaSyAyyNN228NSjFtNL0SBN-vTokH28kkmDlY"
+GEMINI_API_KEY = "AIzaSyD7acG2y27XPTWMpjigpDmjOBezGeSsuiE"
 
 st.set_page_config(page_title="Cari Film & Rekomendasi AI", layout="wide", page_icon="🎬")
 
@@ -76,7 +76,7 @@ def get_movie_recommendations(movie_title: str):
     except Exception as e:
         return {"error": f"Gagal menghubungi Gemini: {str(e)}"}
 
-# 3. Fungsi Helper Gemini BARU untuk Deskripsi
+# 3. Fungsi Helper Gemini untuk Deskripsi
 def get_movie_description(movie_title: str):
     """
     Meminta Gemini untuk membuat deskripsi singkat tentang film jika data API kosong.
@@ -91,7 +91,7 @@ def get_movie_description(movie_title: str):
         model = genai.GenerativeModel('gemini-2.5-flash')
 
         prompt = f"""
-        Tugas: Berikan deskripsi  plot atau sebuah sipnosis yang singkat dan menarik (maksimal 5 paragraf) untuk film '{movie_title}'. Fokus pada premis utama tanpa membocorkan akhir cerita (spoiler).
+        Tugas: Berikan deskripsi plot atau sebuah sipnosis yang singkat dan menarik (maksimal 5 paragraf) untuk film '{movie_title}'. Fokus pada premis utama tanpa membocorkan akhir cerita (spoiler).
         """
 
         response = model.generate_content(prompt)
@@ -100,43 +100,7 @@ def get_movie_description(movie_title: str):
     except Exception:
         return None
     
-# 4. Fungsi Helper Gemini BARU untuk IMDb Rating
-# Perhatikan bahwa kita menggunakan MovieRecommendation schema untuk output
-def get_imdb_rating(movie_title: str):
-    """
-    Meminta Gemini untuk mendapatkan IMDb rating untuk film tertentu dalam format JSON.
-    """
-    if not GEMINI_API_KEY or GEMINI_API_KEY == "GANTI_DENGAN_API_KEY_DISINI":
-        return None
-
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        
-        # Menggunakan Schema list[MovieRecommendation] agar output PASTI JSON yang valid
-        # Namun, kita hanya meminta 1 film, jadi listnya berisi 1 item
-        model = genai.GenerativeModel(
-            'gemini-2.5-flash',
-            generation_config={
-                "response_mime_type": "application/json",
-                "response_schema": list[MovieRecommendation]
-            }
-        )
-
-        prompt = f"""
-        Tugas: Berikan data untuk SATU film saja, yaitu film '{movie_title}'.
-        Berikan:
-        1. judul_film: Judul lengkap film.
-        2. imdb_rating: Rating IMDb (float).
-        3. image_url: URL poster film (ini opsional, bisa diisi placeholder).
-        """
-
-        response = model.generate_content(prompt)
-        # Ambil data pertama dari list hasil
-        return json.loads(response.text)[0].get("imdb_rating")
-
-    except Exception as e:
-        # print(f"Gemini Rating Error: {e}") 
-        return None
+# FUNGSI get_imdb_rating DIHAPUS SESUAI PERMINTAAN
 
 # =================HALAMAN-HALAMAN=================
 
@@ -307,7 +271,7 @@ def show_movie_detail():
         overview_from_api = movie.get("overview")
         current_title = movie.get("title")
 
-        # --- LOGIKA PENANGANAN DESKRIPSI (BARU) ---
+        # --- LOGIKA PENANGANAN DESKRIPSI (TETAP MENGGUNAKAN GEMINI JIKA API GAGAL) ---
         if overview_from_api:
             # Jika API eksternal sukses memberikan deskripsi
             st.markdown(f"**Ringkasan (dari API):** {overview_from_api[:250]}...")
@@ -327,57 +291,36 @@ def show_movie_detail():
                 st.markdown(f"**Ringkasan (dibuat AI):** {final_description}")
             else:
                 st.markdown("**Ringkasan:** *Tidak ada deskripsi singkat tersedia.*")
-        # --- AKHIR LOGIKA BARU ---
+        # --- AKHIR LOGIKA DESKRIPSI ---
             
         st.markdown("---")
 
         # Rating & Runtime
-# BARU: Cek IMDb Rating dari API dan gunakan Gemini jika tidak ada
-        imdb_rating_val = None
-        # Coba ambil dari cache rekomendasi, karena Gemini sudah mencarinya di tahap Rekomendasi
-        recommendations = st.session_state.get("recommendations_cache", [])
-        if isinstance(recommendations, list):
-            for rec in recommendations:
-                if rec.get("judul_film", "").lower() == current_title.lower():
-                    imdb_rating_val = rec.get("imdb_rating")
-                    break
-
-        # Jika masih belum ada (biasanya karena film ini baru pertama kali dilihat)
-        cache_key_imdb = f"imdb_rating_cache_{current_title}"
-        if imdb_rating_val is None:
-            if cache_key_imdb not in st.session_state or st.session_state[cache_key_imdb] is None:
-                # Panggil Gemini untuk mendapatkan IMDb rating
-                with st.spinner(f"AI sedang mencari IMDb rating untuk '{current_title}'..."):
-                    imdb_rating_val = get_imdb_rating(current_title)
-                    st.session_state[cache_key_imdb] = imdb_rating_val
-            
-            imdb_rating_val = st.session_state[cache_key_imdb]
-
+        # MENGHILANGKAN SEMUA LOGIKA PEMANGGILAN GEMINI UNTUK IMDb RATING.
+        # HANYA MENGGUNAKAN JUSTWATCH DAN ROTTENTOMATOES DARI API EKSTERNAL.
+        imdb_rating_val = None # Pastikan ini None agar tidak mengganggu
 
         # Data rating dari API eksternal yang lama
-        # jwRating = movie.get("jwRating")
+        jwRating = movie.get("jwRating")
         tomatometer = movie.get("tomatometer")
         runtime = movie.get("runtime")
 
         cols_metric = st.columns(3)
-        
-        # Perubahan pada kolom pertama: GANTI JustWatch dengan IMDb Rating
-        if imdb_rating_val:
-            with cols_metric[0]:
-                st.metric("IMDb Rating (AI)", f"⭐ {imdb_rating_val}") # Tampilkan IMDb Rating
-        else:
-            # Tampilkan JustWatch (atau biarkan kosong jika JustWatch juga tidak ada)
-            jwRating = (movie.get("jwRating"))*1000
-            result = math.ceil(jwRating)
-            unlike = 100 - result
-            pieChartData = pd.DataFrame({"values":["Like", "Dislike"], "category": [result, unlike]})
+
+        # Gunakan JustWatch Rating
+        if jwRating:
+            jwRating_percent = math.ceil(jwRating * 100)
+            unlike = 100 - jwRating_percent
+            pieChartData = pd.DataFrame({"values":["Like", "Dislike"], "category": [jwRating_percent, unlike]})
             fig = px.pie(pieChartData, values="category", names="values", hole=0.5)
 
-            if jwRating:
-                 with cols_metric[0]:
-                    st.metric("⭐ JustWatch", f"{result}%")
-
-                    st.plotly_chart(fig)
+            with cols_metric[0]:
+                st.metric("⭐ JustWatch", f"{jwRating_percent}%")
+                st.plotly_chart(fig)
+        else:
+             with cols_metric[0]:
+                st.info("JustWatch Rating tidak tersedia.")
+            
 
         if tomatometer:
             with cols_metric[1]:
@@ -389,7 +332,8 @@ def show_movie_detail():
         link = movie.get("link")
         if link:
             st.markdown(f"[🔗 Lihat detail lengkap di JustWatch]({link})")
-    # --- BAGIAN 2: REKOMENDASI AI (DI BAWAH DETAIL) ---
+            
+    # --- BAGIAN 2: REKOMENDASI AI (TETAP MENGGUNAKAN GEMINI) ---
     st.markdown("---")
     st.header(f"🤖 Karena kamu melihat '{movie.get('title')}'")
     st.caption("Berikut adalah rekomendasi film serupa berdasarkan analisis AI (IMDb Data):")
