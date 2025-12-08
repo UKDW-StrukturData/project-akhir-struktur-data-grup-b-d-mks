@@ -6,7 +6,7 @@ import pandas as pd
 import typing_extensions as typing
 import google.generativeai as genai
 import math
-import plotly as px
+import plotly.express as px
 from io import StringIO
 from urllib.parse import quote_plus
 from datetime import datetime
