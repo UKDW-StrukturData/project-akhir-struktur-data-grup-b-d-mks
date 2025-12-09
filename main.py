@@ -14,7 +14,9 @@ from datetime import datetime
 
 # =================KONFIGURASI=================
 # Masukkan API KEY Gemini kamu di sini
-GEMINI_API_KEY = "AIzaSyD5Y-Tu3XvF0Gooo7aI1CwLQNJhFCder4c"
+# PERHATIAN: Saya mengganti API Key di sini dengan placeholder 'GANTI_DENGAN_API_KEY_DISINI'
+# Anda harus menggantinya kembali dengan API Key yang valid.
+GEMINI_API_KEY = "AIzaSyAiGFnkDDelagrxdd2io_OMGuQa3uAXOSI" 
 
 st.set_page_config(page_title="Cari Film & Rekomendasi AI", layout="wide", page_icon="🎬")
 
@@ -31,6 +33,9 @@ if "selected_movie" not in st.session_state:
     st.session_state.selected_movie = None
 if "imported_data" not in st.session_state:
     st.session_state.imported_data = []
+if "selected_comparison_movies" not in st.session_state:
+    st.session_state.selected_comparison_movies = []
+
 
 # =================GEMINI AI SETUP=================
 
@@ -45,6 +50,7 @@ def get_movie_recommendations(movie_title: str):
     """
     Meminta rekomendasi film serupa dari Gemini API dalam format JSON.
     """
+    # Menggunakan GEMINI_API_KEY dari kode yang Anda berikan
     if not GEMINI_API_KEY or GEMINI_API_KEY == "GANTI_DENGAN_API_KEY_DISINI":
         return {"error": "API Key Gemini belum diatur atau masih default."}
 
@@ -81,6 +87,7 @@ def get_movie_description(movie_title: str):
     """
     Meminta Gemini untuk membuat deskripsi singkat tentang film jika data API kosong.
     """
+    # Menggunakan GEMINI_API_KEY dari kode yang Anda berikan
     if not GEMINI_API_KEY or GEMINI_API_KEY == "GANTI_DENGAN_API_KEY_DISINI":
         return None
 
@@ -229,11 +236,11 @@ def show_import_view():
                 st.subheader(item.get("title", "Tanpa Judul"))
                 st.write(item.get("overview", ""))
 
-# === LOGIKA UTAMA DETAIL DAN REKOMENDASI ===
+# === LOGIKA UTAMA DETAIL DAN REKOMENDASI DENGAN GRAFIK BARU ===
 def show_movie_detail():
     """
     Halaman ini muncul SETELAH user menekan tombol 'Lihat Detail & Rekomendasi'.
-    Di sini kita menampilkan detail film yang dipilih + Rekomendasi AI.
+    Di sini kita menampilkan detail film yang dipilih + Rekomendasi AI + Grafik Perbandingan.
     """
     movie = st.session_state.selected_movie
     if not movie:
@@ -296,10 +303,6 @@ def show_movie_detail():
         st.markdown("---")
 
         # Rating & Runtime
-        # MENGHILANGKAN SEMUA LOGIKA PEMANGGILAN GEMINI UNTUK IMDb RATING.
-        # HANYA MENGGUNAKAN JUSTWATCH DAN ROTTENTOMATOES DARI API EKSTERNAL.
-        imdb_rating_val = None # Pastikan ini None agar tidak mengganggu
-
         # Data rating dari API eksternal yang lama
         jwRating = movie.get("jwRating")
         tomatometer = movie.get("tomatometer")
@@ -309,22 +312,30 @@ def show_movie_detail():
 
         # Gunakan JustWatch Rating
         if jwRating:
-            jwRating_percent = math.ceil(jwRating * 100)
-            unlike = 100 - jwRating_percent
-            pieChartData = pd.DataFrame({"values":["Like", "Dislike"], "category": [jwRating_percent, unlike]})
-            fig = px.pie(pieChartData, values="category", names="values", hole=0.5)
+            try:
+                # KOREKSI MATEMATIS: JustWatch rating (0-1) dikalikan 100, BUKAN 1000.
+                jwRating_percent = math.ceil(float(jwRating) * 100) 
+                unlike = 100 - jwRating_percent
+                pieChartData = pd.DataFrame({"values":["Like", "Dislike"], "category": [jwRating_percent, unlike]})
+                fig = px.pie(pieChartData, values="category", names="values", hole=0.5, color_discrete_sequence=['#4CAF50', '#FF5722'])
 
-            with cols_metric[0]:
-                st.metric("⭐ JustWatch", f"{jwRating_percent}%")
-                st.plotly_chart(fig)
+                with cols_metric[0]:
+                    st.metric("⭐ JustWatch", f"{jwRating_percent}%")
+                    st.plotly_chart(fig, use_container_width=True)
+            except ValueError:
+                with cols_metric[0]:
+                    st.info("JustWatch Rating tidak valid.")
         else:
              with cols_metric[0]:
                 st.info("JustWatch Rating tidak tersedia.")
             
-
         if tomatometer:
-            with cols_metric[1]:
-                st.metric("🍅 RottenTomatoes", f"{tomatometer}%")
+            try:
+                tomatometer_val = float(tomatometer)
+                with cols_metric[1]:
+                    st.metric("🍅 RottenTomatoes", f"{tomatometer_val}%")
+            except ValueError:
+                pass # Abaikan jika tidak bisa dikonversi
         if runtime:
             with cols_metric[2]:
                 st.metric("⏱ Durasi", f"{runtime} min")
@@ -338,7 +349,6 @@ def show_movie_detail():
     st.header(f"🤖 Karena kamu melihat '{movie.get('title')}'")
     st.caption("Berikut adalah rekomendasi film serupa berdasarkan analisis AI (IMDb Data):")
 
-    # Kita gunakan judul film yang sedang dilihat sebagai query ke Gemini
     # Caching untuk Rekomendasi
     if "recommendations_cache" not in st.session_state or st.session_state.get("current_rec_movie") != current_title:
         with st.spinner(f"Sedang mencari film yang mirip dengan '{current_title}'..."):
@@ -376,6 +386,139 @@ def show_movie_detail():
         st.info("Tidak ada rekomendasi yang ditemukan.")
 
     st.markdown("---")
+    
+    # =========================================================================
+    # --- BAGIAN 3: GRAFIK PERBANDINGAN RATING DAN DURASI DENGAN FILM LAIN ---
+    # =========================================================================
+    
+    st.header("Perbandingan Film dari Rating & Durasi")
+    st.caption("Bandingkan film ini dengan 3 film lain dari hasil pencarian/import.")
+    
+    # Gabungkan semua data film yang tersedia untuk perbandingan
+    available_movies = (
+        st.session_state.search_results + 
+        st.session_state.imported_data
+    )
+    
+    # Tambahkan film yang sedang dilihat (jika belum ada)
+    current_movie_title = movie.get("title")
+    if not any(m.get("title") == current_movie_title for m in available_movies):
+         available_movies.append(movie) 
+
+    # Hilangkan duplikat berdasarkan judul dan film tanpa judul
+    unique_movies_map = {}
+    for m in available_movies:
+        title = m.get("title")
+        if title and title not in unique_movies_map:
+             unique_movies_map[title] = m
+    
+    comparison_data_list = list(unique_movies_map.values())
+    
+    # Buat dictionary untuk mapping agar mudah diakses
+    movie_dict = {m.get("title"): m for m in comparison_data_list}
+    movie_titles = list(movie_dict.keys())
+
+    # Filter film yang sedang dilihat dari opsi multiselect
+    options_for_select = [title for title in movie_titles if title != current_movie_title]
+        
+    # Set default pilihan film yang sudah pernah dipilih
+    default_selection = [current_movie_title] 
+
+    # Multiselect untuk memilih 3 film
+    selected_titles = st.multiselect(
+        "Pilih 3 film yang serupa untuk perbandingan (maksimal 3 film)",
+        options=options_for_select,
+        default=st.session_state.selected_comparison_movies,
+        max_selections=3,
+        key="comparison_selector"
+    )
+
+    # Gabungkan film yang sedang dilihat dengan film yang dipilih
+    final_comparison_titles = default_selection + selected_titles
+
+    if not final_comparison_titles:
+        st.info("Pilih film lain untuk melihat perbandingan.")
+        return
+
+    # Update session state
+    st.session_state.selected_comparison_movies = selected_titles
+    
+    # Siapkan DataFrame untuk Plotly
+    data_for_df = []
+    skipped_titles = [] # Tambahkan list untuk film yang di-skip
+    
+    for title in final_comparison_titles:
+        m = movie_dict.get(title)
+        if m:
+            # Durasi
+            try:
+                runtime_val = float(m.get("runtime") or 0)
+            except (ValueError, TypeError):
+                runtime_val = 0
+            
+            # Rating (Prioritas JustWatch, lalu RottenTomatoes)
+            rating_val = 0
+            try:
+                # JW Rating (0-1) * 100
+                rating_val = float(m.get("jwRating") or 0) * 100
+            except (ValueError, TypeError):
+                pass
+            
+            if rating_val == 0:
+                 try:
+                    # Tomatometer (%)
+                    rating_val = float(m.get("tomatometer") or 0)
+                 except (ValueError, TypeError):
+                    rating_val = 0
+
+            # KOREKSI PENTING: Hapus perkalian rating_val * 10 di sini!
+            # Dan tambahkan filter untuk film dengan data 0
+            
+            if runtime_val > 0 or rating_val > 0:
+                 data_for_df.append({
+                    "Film": title,
+                    "Durasi (menit)": runtime_val,
+                    "Rating (%)": rating_val,
+                 })
+            else:
+                # Jika Durasi dan Rating sama-sama 0, skip dan beri peringatan
+                skipped_titles.append(title)
+
+
+    if skipped_titles:
+        st.warning(f"⚠️ Film berikut dilewati dari grafik karena data rating dan durasi tidak tersedia (0): **{', '.join(skipped_titles)}**")
+
+    if not data_for_df:
+        st.error("Data perbandingan tidak valid atau semua film yang dipilih tidak memiliki data rating/durasi.")
+        return
+        
+    df = pd.DataFrame(data_for_df)
+    
+    # Transpose data untuk Line Chart yang membandingkan Metrik
+    df_melted = pd.melt(
+        df, 
+        id_vars='Film', 
+        value_vars=['Durasi (menit)', 'Rating (%)'], 
+        var_name='Metrik', 
+        value_name='Nilai'
+    )
+    
+    # Buat Line Chart
+    fig_comp = px.line(
+        df_melted, 
+        x="Metrik", 
+        y="Nilai", 
+        color="Film", 
+        markers=True,
+        title="Perbandingan Rating dan Durasi Film"
+    )
+    
+    fig_comp.update_layout(yaxis_title="Nilai (Durasi dalam menit, Rating dalam %)")
+    
+    st.plotly_chart(fig_comp, use_container_width=True)
+    
+    st.markdown("---")
+
 
 def show_search_page():
     
@@ -475,7 +618,7 @@ def show_search_page():
             col_json, col_csv = st.columns(2)
             # JSON Export
             json_str = json.dumps(results, indent=2)
-            col_json.download_button("Download JSON", data=json_str, file_name=f"hasil_{search_query}.json", mime="application/json")
+            col_json.download_button("Download JSON", data=json_str, file_name=f"hasil_{st.session_state.get('last_query', 'pencarian')}.json", mime="application/json")
             
             # CSV Export
             csv_buffer = StringIO()
@@ -483,7 +626,7 @@ def show_search_page():
                 writer = csv.DictWriter(csv_buffer, fieldnames=results[0].keys())
                 writer.writeheader()
                 writer.writerows(results)
-                col_csv.download_button("Download CSV", data=csv_buffer.getvalue(), file_name=f"hasil_{search_query}.csv", mime="text/csv")
+                col_csv.download_button("Download CSV", data=csv_buffer.getvalue(), file_name=f"hasil_{st.session_state.get('last_query', 'pencarian')}.csv", mime="text/csv")
 
         # === TAMPILAN GRID FILM ===
         cards_per_row = 3
@@ -505,11 +648,12 @@ def show_search_page():
                         st.subheader(f"{item.get('title')}")
                         st.caption(f"Tahun: {item.get('year')}")
                         
-                        # LOGIKA TOMBOL DETAIL (SESUAI REQUEST)
-                        # Ketika tombol ini ditekan, kita simpan data film dan pindah halaman
+                        # LOGIKA TOMBOL DETAIL
                         btn_key = f"detail_{i}{idx}{item.get('title')}"
                         if st.button("Lihat Detail & Rekomendasi", key=btn_key, use_container_width=True, type="primary"):
                             st.session_state.selected_movie = item
+                            # Reset pilihan perbandingan saat memilih film baru
+                            st.session_state.selected_comparison_movies = [] 
                             st.session_state.page = "detail"
                             st.rerun()
 
