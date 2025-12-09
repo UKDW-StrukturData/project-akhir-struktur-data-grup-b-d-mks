@@ -16,7 +16,7 @@ from datetime import datetime
 # Masukkan API KEY Gemini kamu di sini
 # PERHATIAN: Saya mengganti API Key di sini dengan placeholder 'GANTI_DENGAN_API_KEY_DISINI'
 # Anda harus menggantinya kembali dengan API Key yang valid.
-GEMINI_API_KEY = "AIzaSyAiGFnkDDelagrxdd2io_OMGuQa3uAXOSI" 
+GEMINI_API_KEY = "AIzaSyAw9kB2D3FVfA6jU-FU7tZrjWhvdpFc71Q" 
 
 st.set_page_config(page_title="Cari Film & Rekomendasi AI", layout="wide", page_icon="🎬")
 
@@ -35,6 +35,34 @@ if "imported_data" not in st.session_state:
     st.session_state.imported_data = []
 if "selected_comparison_movies" not in st.session_state:
     st.session_state.selected_comparison_movies = []
+
+
+# =================HELPER FUNGSI BARU=================
+
+def get_average_runtime(movie_list):
+    """Menghitung durasi rata-rata dari semua film yang ada (hasil cari + import)."""
+    runtimes = []
+    # Gabungkan data untuk menghindari duplikasi saat menghitung rata-rata
+    unique_movies = {}
+    for movie in movie_list:
+        title = movie.get("title")
+        if title and title not in unique_movies:
+            unique_movies[title] = movie
+
+    for movie in unique_movies.values():
+        try:
+            # Pastikan runtime adalah string dan bisa diubah ke float
+            runtime_str = movie.get("runtime")
+            if runtime_str:
+                runtime_val = float(runtime_str)
+                if runtime_val > 0:
+                    runtimes.append(runtime_val)
+        except (ValueError, TypeError):
+            continue
+    
+    if not runtimes:
+        return 0
+    return sum(runtimes) / len(runtimes)
 
 
 # =================GEMINI AI SETUP=================
@@ -179,7 +207,17 @@ def show_import_export():
                     imported_data = []
                     csv_reader = csv.DictReader(stringio)
                     for row in csv_reader:
-                        imported_data.append(row)
+                        # Normalisasi keys untuk konsistensi dengan hasil pencarian
+                        normalized_row = {
+                             "title": row.get("title", row.get("judul")),
+                             "year": row.get("year", row.get("tahun")),
+                             "runtime": row.get("runtime", row.get("durasi")),
+                             "jwRating": row.get("jwRating"),
+                             "tomatometer": row.get("tomatometer"),
+                             "overview": row.get("overview") or row.get("deskripsi"),
+                             "poster": row.get("poster_url") or row.get("poster"),
+                        }
+                        imported_data.append(normalized_row)
                     
                     st.session_state.imported_data = imported_data
                     st.success(f"✅ Berhasil import {len(imported_data)} film dari CSV!")
@@ -197,7 +235,7 @@ def show_import_export():
         
         st.download_button(
             label="📄 Download Template CSV",
-            data="title,year,runtime,jwRating,tomatometer\nAvengers,2012,143,0.95,92\n",
+            data="title,year,runtime,jwRating,tomatometer,overview,poster\nAvengers,2012,143,0.95,92,Sekelompok pahlawan super berkumpul,null,null\n",
             file_name="template_film.csv",
             mime="text/csv"
         )
@@ -281,10 +319,8 @@ def show_movie_detail():
             # Jika API eksternal sukses memberikan deskripsi
             st.markdown(f"**Ringkasan (dari API):** {overview_from_api[:250]}...")
         else:
-            # Jika API eksternal GAGAL, panggil Gemini untuk membuat deskripsi
             cache_key = f"description_cache_{current_title}"
             
-            # Cek cache atau generate baru
             if cache_key not in st.session_state or st.session_state[cache_key] is None:
                 with st.spinner(f"Ringkasan tidak tersedia. AI sedang membuat deskripsi untuk '{current_title}'..."):
                     ai_description = get_movie_description(current_title)
@@ -301,14 +337,14 @@ def show_movie_detail():
         st.markdown("---")
 
         # Rating & Runtime
-        # Data rating dari API eksternal yang lama
         jwRating = movie.get("jwRating")
         tomatometer = movie.get("tomatometer")
         runtime = movie.get("runtime")
 
-        cols_metric = st.columns(3)
+        # --- STRUKTUR 3 KOLOM: [JustWatch + Pie] | [Rotten Tomatoes] | [Durasi + Bar Chart] ---
+        cols_metric = st.columns(3) 
 
-        # Gunakan JustWatch Rating
+        # Gunakan JustWatch Rating (Kolom 1)
         if jwRating:
             try:
                 # JustWatch rating (0-1) dikalikan 100
@@ -324,25 +360,75 @@ def show_movie_detail():
                 with cols_metric[0]:
                     st.info("JustWatch Rating tidak valid.")
         else:
-             with cols_metric[0]:
+              with cols_metric[0]:
                 st.info("JustWatch Rating tidak tersedia.")
             
+        # Rotten Tomatoes (Kolom 2)
         if tomatometer:
             try:
                 tomatometer_val = float(tomatometer)
                 with cols_metric[1]:
                     st.metric("🍅 RottenTomatoes", f"{tomatometer_val}%")
             except ValueError:
-                pass # Abaikan jika tidak bisa dikonversi
-        if runtime:
-            with cols_metric[2]:
-                st.metric("⏱ Durasi", f"{runtime} min")
-                
+                pass 
+        
+        # Durasi Film Terpilih & Grafik Perbandingan Durasi (Kolom 3)
+        current_runtime_val = 0
+        with cols_metric[2]:
+            if runtime:
+                try:
+                    current_runtime_val = float(runtime)
+                    # Metrik Durasi Film Ini
+                    st.metric("⏱ Durasi Film Ini", f"{current_runtime_val} min")
+                except ValueError:
+                    pass
+            
+            # Subheader untuk Grafik Durasi Perbandingan
+            # st.subheader("Vs Rata-rata") # Dihilangkan karena title grafik sudah cukup
+            
+            # Dapatkan semua film yang tersedia (hasil pencarian + import)
+            available_movies = (
+                st.session_state.search_results + 
+                st.session_state.imported_data
+            )
+            average_runtime = get_average_runtime(available_movies)
+
+            if current_runtime_val > 0 and average_runtime > 0:
+                # Siapkan data untuk grafik perbandingan
+                durasi_data = pd.DataFrame({
+                    "Kategori": ["Film Ini", "Rata-rata"],
+                    "Durasi": [current_runtime_val, average_runtime]
+                })
+
+                # Buat bar chart menggunakan Plotly Express
+                fig_durasi_comp = px.bar(
+                    durasi_data,
+                    x="Kategori",
+                    y="Durasi",
+                    color="Kategori",
+                    color_discrete_map={
+                        "Film Ini": "#2196F3", # Biru
+                        "Rata-rata": "#FFC107" # Kuning
+                    },
+                    text_auto=True,
+                    title="Durasi (menit)"
+                )
+                fig_durasi_comp.update_layout(
+                    showlegend=False, 
+                    margin=dict(t=50, b=0, l=0, r=0), # Kurangi margin atas
+                    height=250 # Atur tinggi agar lebih ringkas
+                ) 
+                fig_durasi_comp.update_traces(marker_line_width=0)
+                st.plotly_chart(fig_durasi_comp, use_container_width=True)
+            else:
+                st.info("Data durasi atau rata-rata tidak tersedia.")
+        # --- AKHIR KOLOM METRIK DURASI ---
+            
         link = movie.get("link")
         if link:
             st.markdown(f"[🔗 Lihat detail lengkap di JustWatch]({link})")
             
-    # --- BAGIAN 2: REKOMENDASI AI (TETAP MENGGUNAKAN GEMINI) ---
+    # --- BAGIAN 2: REKOMENDASI AI ---
     st.markdown("---")
     st.header(f"🤖 Karena kamu melihat '{movie.get('title')}'")
     st.caption("Berikut adalah rekomendasi film serupa berdasarkan analisis AI (IMDb Data):")
@@ -393,22 +479,22 @@ def show_movie_detail():
     st.caption("Bandingkan film ini dengan film lain dari hasil pencarian/import.")
     
     # Gabungkan semua data film yang tersedia untuk perbandingan
-    available_movies = (
+    available_movies_for_comparison = (
         st.session_state.search_results + 
         st.session_state.imported_data
     )
     
     # Tambahkan film yang sedang dilihat (jika belum ada)
     current_movie_title = movie.get("title")
-    if not any(m.get("title") == current_movie_title for m in available_movies):
-          available_movies.append(movie) 
+    if not any(m.get("title") == current_movie_title for m in available_movies_for_comparison):
+        available_movies_for_comparison.append(movie) 
 
     # Hilangkan duplikat berdasarkan judul dan film tanpa judul
     unique_movies_map = {}
-    for m in available_movies:
+    for m in available_movies_for_comparison:
         title = m.get("title")
         if title and title not in unique_movies_map:
-              unique_movies_map[title] = m
+            unique_movies_map[title] = m
     
     comparison_data_list = list(unique_movies_map.values())
     
@@ -449,6 +535,7 @@ def show_movie_detail():
         m = movie_dict.get(title)
         if m:
             # Durasi
+            runtime_val = 0
             try:
                 runtime_val = float(m.get("runtime") or 0)
             except (ValueError, TypeError):
@@ -463,18 +550,18 @@ def show_movie_detail():
                 pass
             
             if rating_val == 0:
-                  try:
-                      # Tomatometer (%)
-                      rating_val = float(m.get("tomatometer") or 0)
-                  except (ValueError, TypeError):
-                      rating_val = 0
+                 try:
+                     # Tomatometer (%)
+                     rating_val = float(m.get("tomatometer") or 0)
+                 except (ValueError, TypeError):
+                     rating_val = 0
 
             
             if runtime_val > 0 or rating_val > 0:
-                  data_for_df.append({
-                      "Film": title,
-                      "Durasi (menit)": runtime_val,
-                      "Rating (%)": rating_val,
+                 data_for_df.append({
+                     "Film": title,
+                     "Durasi (menit)": runtime_val,
+                     "Rating (%)": rating_val,
                    })
             else:
                 skipped_titles.append(title)
@@ -627,7 +714,12 @@ def show_search_page():
             # CSV Export
             csv_buffer = StringIO()
             if results:
-                writer = csv.DictWriter(csv_buffer, fieldnames=results[0].keys())
+                # Ambil semua keys unik dari semua hasil sebagai fieldnames
+                all_keys = set()
+                for item in results:
+                    all_keys.update(item.keys())
+                
+                writer = csv.DictWriter(csv_buffer, fieldnames=list(all_keys))
                 writer.writeheader()
                 writer.writerows(results)
                 col_csv.download_button("Download CSV", data=csv_buffer.getvalue(), file_name=f"hasil_{st.session_state.get('last_query', 'pencarian')}.csv", mime="text/csv")
