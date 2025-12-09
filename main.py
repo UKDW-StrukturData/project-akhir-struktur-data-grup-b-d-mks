@@ -422,11 +422,33 @@ def show_movie_detail():
                 st.plotly_chart(fig_durasi_comp, use_container_width=True)
             else:
                 st.info("Data durasi atau rata-rata tidak tersedia.")
+                
         # --- AKHIR KOLOM METRIK DURASI ---
-            
         link = movie.get("link")
         if link:
             st.markdown(f"[🔗 Lihat detail lengkap di JustWatch]({link})")
+
+        st.markdown("---")
+        st.subheader("🎥 Tempat Menonton Film Ini")
+        
+        jw = movie.get("justwatch", {})
+        
+        if not jw:
+            st.info("Tidak ada data penyedia streaming (JustWatch).")
+        else:
+            def list_providers(title, key):
+                if key in jw and jw[key]:
+                    st.markdown(f"#### {title}")
+                    for p in jw[key]:
+                        provider = p.get("provider", "-")
+                        quality = p.get("quality", "-")
+                        st.write(f"- **{provider}** (Kualitas: {quality})")
+        
+            list_providers("📺 Streaming Langsung (Flatrate)", "flatrate")
+            list_providers("💳 Sewa (Rent)", "rent")
+            list_providers("🛒 Beli (Buy)", "buy")
+        
+        st.markdown("---")
             
     # --- BAGIAN 2: REKOMENDASI AI ---
     st.markdown("---")
