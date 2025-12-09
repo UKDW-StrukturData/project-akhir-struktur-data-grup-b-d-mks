@@ -1,0 +1,779 @@
+import streamlit as st
+import requests
+import json
+import csv
+import pandas as pd
+import typing_extensions as typing 
+import math
+import plotly.express as px
+from io import StringIO
+from urllib.parse import quote_plus
+from datetime import datetime
+
+
+# =================KONFIGURASI=================
+# CATATAN: Konfigurasi Gemini API dihapus di sini
+# GEMINI_API_KEY = "DIHAPUS" 
+
+st.set_page_config(page_title="Cari Film & Rekomendasi Non-AI/AI", layout="wide", page_icon="🎬")
+
+# Session state untuk navigasi dan data
+if "page" not in st.session_state:
+    st.session_state.page = "start"
+if "search_history" not in st.session_state:
+    st.session_state.search_history = []
+if "favorites" not in st.session_state:
+    st.session_state.favorites = []
+if "search_results" not in st.session_state:
+    st.session_state.search_results = []
+if "selected_movie" not in st.session_state:
+    st.session_state.selected_movie = None
+if "imported_data" not in st.session_state:
+    st.session_state.imported_data = []
+if "selected_comparison_movies" not in st.session_state:
+    st.session_state.selected_comparison_movies = []
+if "last_ai_query" not in st.session_state:
+    st.session_state.last_ai_query = ""
+
+
+# =================HELPER FUNGSI UMUM=================
+
+def get_average_runtime(movie_list):
+    """Menghitung durasi rata-rata dari semua film yang ada (hasil cari + import)."""
+    runtimes = []
+    unique_movies = {}
+    for movie in movie_list:
+        title = movie.get("title")
+        if title and title not in unique_movies:
+            unique_movies[title] = movie
+
+    for movie in unique_movies.values():
+        try:
+            runtime_str = movie.get("runtime")
+            if runtime_str:
+                runtime_val = float(runtime_str)
+                if runtime_val > 0:
+                    runtimes.append(runtime_val)
+        except (ValueError, TypeError):
+            continue
+    
+    if not runtimes:
+        return 0
+    return sum(runtimes) / len(runtimes)
+
+
+# =================FUNGSI REKOMENDASI DUMMY (Non-AI)=================
+
+def get_movie_recommendations(movie_title: str):
+    """Mengembalikan rekomendasi dummy."""
+    return [
+        {"judul_film": f"Rekomendasi 1 (Mirip {movie_title})", "imdb_rating": 8.5, "image_url": "https://via.placeholder.com/300x450?text=Rekomendasi+1"},
+        {"judul_film": f"Rekomendasi 2 (Mirip {movie_title})", "imdb_rating": 7.9, "image_url": "https://via.placeholder.com/300x450?text=Rekomendasi+2"},
+        {"judul_film": f"Rekomendasi 3 (Mirip {movie_title})", "imdb_rating": 7.0, "image_url": "https://via.placeholder.com/300x450?text=Rekomendasi+3"},
+        {"judul_film": f"Rekomendasi 4 (Mirip {movie_title})", "imdb_rating": 6.5, "image_url": "https://via.placeholder.com/300x450?text=Rekomendasi+4"},
+    ]
+
+def get_movie_description(movie_title: str):
+    """Mengembalikan deskripsi dummy."""
+    return f"Deskripsi ini dihasilkan secara otomatis (dummy) karena API AI tidak digunakan. Film **{movie_title}** adalah film yang menarik dengan plot yang seru."
+
+
+# =================FUNGSI SIMULASI AI (Akan Diganti dengan Panggilan Gemini Asli)=================
+def fetch_movies_from_ai(query: str):
+    """
+    ***PLACEHOLDER UNTUK PANGGILAN GEMINI API***
+    
+    Anda harus mengganti isi fungsi ini dengan kode panggilan Gemini yang sebenarnya.
+    Gemini diharapkan mengembalikan daftar film (misalnya, dalam format JSON terstruktur).
+    """
+    # st.info(f"Fungsi ini seharusnya memanggil Gemini AI dengan prompt: '{query}' untuk mendapatkan daftar film.")
+    
+    # Simulasi hasil dari Gemini
+    if "Action" in query:
+        return [
+            {"title": "Die Hard", "year": 1988, "overview": "Film aksi klasik dengan bintang Bruce Willis.", "jwRating": 0.9, "poster": "https://via.placeholder.com/300x450/333333/FFFFFF?text=Die+Hard+(AI)"},
+            {"title": "The Dark Knight", "year": 2008, "overview": "Salah satu film superhero terbaik sepanjang masa.", "jwRating": 0.92, "poster": "https://via.placeholder.com/300x450/333333/FFFFFF?text=Dark+Knight+(AI)"}
+        ]
+    elif "Comedy" in query:
+         return [
+            {"title": "The Hangover", "year": 2009, "overview": "Petualangan konyol di Las Vegas.", "jwRating": 0.8, "poster": "https://via.placeholder.com/300x450/333333/FFFFFF?text=Hangover+(AI)"},
+            {"title": "Dumb and Dumber", "year": 1994, "overview": "Komedian Jim Carrey dan Jeff Daniels.", "jwRating": 0.75, "poster": "https://via.placeholder.com/300x450/333333/FFFFFF?text=Dumb+Dumber+(AI)"}
+        ]
+    # Default fallback
+    return [
+        {"title": f"Film Top 1 ({query})", "year": 2024, "overview": f"Rekomendasi terbaik dari AI berdasarkan {query}.", "jwRating": 0.85, "poster": "https://via.placeholder.com/300x450/333333/FFFFFF?text=AI+Result+1"},
+        {"title": f"Film Top 2 ({query})", "year": 2023, "overview": f"Rekomendasi terbaik dari AI berdasarkan {query}.", "jwRating": 0.80, "poster": "https://via.placeholder.com/300x450/333333/FFFFFF?text=AI+Result+2"},
+    ]
+
+
+# =================HALAMAN-HALAMAN=================
+
+def show_start_page():
+    st.title("🎬 Pencarian Film")
+    st.markdown("Cari info film lengkap dengan sekali klik!")
+    
+    show_popular_movies()
+    
+    show_import_export()
+    
+    st.markdown("---")
+    
+    st.subheader("Cara Menggunakan:")
+    st.markdown("""
+    1. *Klik tombol 'Mulai Cari Film'* atau klik film di bagian *Film Populer*.
+    2. *Tombol 'Lainnya'*: Akan menampilkan rekomendasi film top dari **simulasi AI**.
+    3. *Pilih Film:* Klik tombol "Lihat Detail".
+    """)
+    
+    st.markdown("---")
+    
+    if st.button("🚀 Mulai Cari Film", type="primary"):
+        st.session_state.page = "search"
+        st.rerun()
+
+# FUNGSI POPULAR MOVIES VERSI STATIS (REVISI LAYOUT VERTIKAL & LOGIKA LAINNYA KE AI)
+def show_popular_movies():
+    """Menampilkan film-film populer per genre secara statis dalam satu kolom vertikal."""
+    st.subheader("🎭 Film Populer Berdasarkan Genre (Statis)")
+    
+    # Data film statis
+    popular_movies_by_genre = {
+        "Action": ["Rambo", "A Working Man", "Uncharted", "John Wick"], 
+        "Comedy": ["Agak Laen", "Home Alone", "Mr Bean's Holiday", "Jumanji"],
+        "Romance": ["April Snow", "My Oxford Year", "The Notebook", "Love My Scent"],
+        "Animation": ["How to Train Your Dragon", "Your Name.", "Kpop Demon Hunter", "Zootopia"],
+    }
+    
+    genres = list(popular_movies_by_genre.keys())
+    
+    # Loop melalui setiap genre, dan setiap iterasi loop akan menempati lebar penuh
+    for idx, genre in enumerate(genres):
+        
+        with st.container():
+            st.markdown(f"**🔥 {genre}**")
+            
+            movies = popular_movies_by_genre[genre]
+            
+            # Tampilkan tombol-tombol film dalam N kolom kecil
+            cols_btn = st.columns(len(movies)) 
+            
+            for movie_idx, movie_title in enumerate(movies):
+                with cols_btn[movie_idx]:
+                    # Tombol film (mengarahkan ke pencarian JustWatch API)
+                    if movie_title:
+                        if st.button(f"🎬 {movie_title}", key=f"pop_{genre}_{movie_idx}", use_container_width=True):
+                            st.session_state.page = "search"
+                            st.session_state["last_query"] = movie_title 
+                            st.rerun()
+                            
+            # Query Dinamis untuk AI/Pencarian Top Genre
+            ai_query = f"Top {genre} Movies" 
+
+            # Tombol 'Lainnya' yang memanjang (mengarahkan ke halaman hasil AI)
+            lainnya_col = st.columns(1)[0]
+            with lainnya_col:
+                 if st.button(f"🔎 Lainnya (Top {genre})", key=f"pop_{genre}_lainnya", use_container_width=True, type="secondary"):
+                    st.session_state.page = "ai_search_results" # Pindah ke halaman hasil AI
+                    st.session_state["last_ai_query"] = ai_query 
+                    st.rerun()
+            
+            st.markdown("---") 
+
+
+def show_ai_search_results():
+    """Halaman untuk menampilkan hasil yang disimulasikan dari Gemini AI."""
+    query = st.session_state.get("last_ai_query")
+    
+    if st.button("← Kembali ke Beranda"):
+        st.session_state.page = "start"
+        st.rerun()
+
+    st.title(f"🤖 Hasil Film Top dari AI: {query}")
+    st.caption("***Catatan: Data di bawah ini adalah hasil simulasi. Ganti fungsi `fetch_movies_from_ai` dengan kode Gemini API Anda yang sebenarnya.***")
+    st.markdown("---")
+    
+    with st.spinner(f"Meminta rekomendasi film top dari AI ({query})..."):
+        # Panggil fungsi placeholder AI
+        ai_results = fetch_movies_from_ai(query)
+
+    if not ai_results:
+        st.warning("AI tidak memberikan hasil.")
+        return
+
+    st.success(f"Ditemukan {len(ai_results)} hasil film top (simulasi AI).")
+
+    # Tampilkan hasil dalam Grid 3 Kolom
+    cards_per_row = 3
+    for i in range(0, len(ai_results), cards_per_row):
+        row = ai_results[i:i+cards_per_row]
+        cols = st.columns(cards_per_row)
+
+        for idx, item in enumerate(row):
+            with cols[idx]:
+                with st.container(border=True):
+                    # Poster
+                    poster = item.get("poster")
+                    if poster:
+                        st.image(poster, use_container_width=True)
+                    else:
+                        st.image("https://via.placeholder.com/300x450/333333/FFFFFF?text=AI+Result", use_container_width=True)
+                    
+                    st.subheader(item.get('title', ''))
+                    st.caption(f"Tahun: {item.get('year', '')} | Rating JW (Simulasi): {item.get('jwRating', '')}")
+                    
+                    # LOGIKA TOMBOL DETAIL (Mengarahkan ke halaman detail)
+                    btn_key = f"ai_detail_{i}{idx}{item.get('title')}"
+                    
+                    if st.button("Lihat Detail & Rekomendasi", key=btn_key, use_container_width=True, type="primary"):
+                        # Data dari AI (item) menjadi film yang dipilih
+                        st.session_state.selected_movie = item
+                        st.session_state.selected_comparison_movies = [] 
+                        st.session_state.page = "detail"
+                        st.rerun()
+
+
+def show_import_export():
+    """Menampilkan fitur Import/Export"""
+    st.subheader("📁 Import & Export Data")
+    
+    col_import, col_export = st.columns(2)
+    
+    with col_import:
+        st.markdown("### 📥 Import Data")
+        uploaded_file = st.file_uploader(
+            "Unggah file JSON/CSV", 
+            type=['json', 'csv'],
+            help="Unggah file hasil export sebelumnya"
+        )
+        
+        if uploaded_file is not None:
+            try:
+                if uploaded_file.type == "application/json":
+                    imported_data = json.load(uploaded_file)
+                    st.session_state.imported_data = imported_data
+                    st.success(f"✅ Berhasil import {len(imported_data)} film dari JSON!")
+                    
+                    if st.button("📋 Lihat Data Import"):
+                        st.session_state.page = "import_view"
+                        st.rerun()
+                        
+                elif uploaded_file.type == "text/csv":
+                    stringio = StringIO(uploaded_file.getvalue().decode("utf-8"))
+                    imported_data = []
+                    csv_reader = csv.DictReader(stringio)
+                    for row in csv_reader:
+                        # Normalisasi keys untuk konsistensi dengan hasil pencarian
+                        normalized_row = {
+                             "title": row.get("title", row.get("judul")),
+                             "year": row.get("year", row.get("tahun")),
+                             "runtime": row.get("runtime", row.get("durasi")),
+                             "jwRating": row.get("jwRating"),
+                             "tomatometer": row.get("tomatometer"),
+                             "overview": row.get("overview") or row.get("deskripsi"),
+                             "poster": row.get("poster_url") or row.get("poster"),
+                         }
+                        imported_data.append(normalized_row)
+                    
+                    st.session_state.imported_data = imported_data
+                    st.success(f"✅ Berhasil import {len(imported_data)} film dari CSV!")
+                    
+                    if st.button("📋 Lihat Data Import", key="view_csv_import"):
+                        st.session_state.page = "import_view"
+                        st.rerun()
+                        
+            except Exception as e:
+                st.error(f"❌ Error importing file: {str(e)}")
+    
+    with col_export:
+        st.markdown("### 📤 Export Data")
+        st.info("Fitur export tersedia di halaman pencarian setelah hasil muncul.")
+        
+        st.download_button(
+            label="📄 Download Template CSV",
+            data="title,year,runtime,jwRating,tomatometer,overview,poster\nAvengers,2012,143,0.95,92,Sekelompok pahlawan super berkumpul,null,null\n",
+            file_name="template_film.csv",
+            mime="text/csv"
+        )
+
+def show_import_view():
+    """Menampilkan data yang diimport"""
+    st.title("📋 Data Film yang Diimport")
+    
+    if st.button("← Kembali"):
+        st.session_state.page = "start"
+        st.rerun()
+    
+    imported_data = st.session_state.get("imported_data", [])
+    
+    if not imported_data:
+        st.warning("Tidak ada data yang diimport")
+        return
+    
+    st.success(f"🎉 Berhasil mengimport {len(imported_data)} film!")
+    
+    for i, item in enumerate(imported_data):
+        with st.container(border=True):
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                poster = item.get("poster") or item.get("poster_url")
+                if poster:
+                    try:
+                        st.image(poster, use_container_width=True)
+                    except:
+                        st.info("No Image")
+                else:
+                    st.info("No Image")
+            with col2:
+                st.subheader(item.get("title", "Tanpa Judul"))
+                st.write(item.get("overview", ""))
+
+# === LOGIKA UTAMA DETAIL DAN REKOMENDASI DENGAN GRAFIK BATANG ===
+def show_movie_detail():
+    """
+    Halaman ini muncul SETELAH user menekan tombol 'Lihat Detail & Rekomendasi'.
+    Di sini kita menampilkan detail film yang dipilih + Rekomendasi Dummy + Grafik Perbandingan.
+    """
+    movie = st.session_state.selected_movie
+    if not movie:
+        st.warning("Tidak ada film yang dipilih. Kembali ke pencarian.")
+        st.session_state.page = "search"
+        st.rerun()
+        return
+
+    # Tombol kembali ke hasil pencarian
+    if st.button("← Kembali ke Hasil Pencarian"):
+        # Cek dari mana datangnya (AI atau Search biasa)
+        if st.session_state.get("last_ai_query"):
+             st.session_state.page = "ai_search_results"
+        else:
+             st.session_state.page = "search"
+        st.rerun()
+        
+    st.markdown("---")
+    
+    # --- BAGIAN 1: DETAIL MOVIE YANG DIPILIH ---
+    st.title(movie.get("title", "Detail Film"))
+    
+    col_poster, col_info = st.columns([1, 3])
+    
+    with col_poster:
+        poster = movie.get("poster")
+        if poster:
+            try:
+                st.image(poster, use_container_width=True)
+            except:
+                st.image("https://via.placeholder.com/400x600/f0f0f0/808080?text=Poster+Tidak+Tersedia", use_container_width=True)
+        else:
+            st.image("https://via.placeholder.com/400x600/f0f0f0/808080?text=Poster+Tidak+Tersedia", use_container_width=True)
+    
+    with col_info:
+        st.subheader(f"{movie.get('title', 'Nama Film')} ({movie.get('year', 'Tahun tidak diketahui')})")
+        
+        # Mendapatkan data awal
+        overview_from_api = movie.get("overview")
+        current_title = movie.get("title")
+
+        # --- LOGIKA PENANGANAN DESKRIPSI (Gunakan Dummy jika API Gagal) ---
+        if overview_from_api:
+            st.markdown(f"**Ringkasan (dari API/AI):** {overview_from_api[:250]}...")
+        else:
+            ai_description = get_movie_description(current_title)
+            st.markdown(f"**Ringkasan (Dibuat Dummy):** {ai_description}")
+        st.markdown("---")
+
+        # Rating & Runtime
+        jwRating = movie.get("jwRating")
+        tomatometer = movie.get("tomatometer")
+        runtime = movie.get("runtime")
+
+        # --- STRUKTUR 3 KOLOM: [JustWatch + Pie] | [Rotten Tomatoes] | [Durasi + Bar Chart] ---
+        cols_metric = st.columns(3) 
+
+        # Gunakan JustWatch Rating (Kolom 1)
+        if jwRating:
+            try:
+                jwRating_percent = math.ceil(float(jwRating) * 100) 
+                unlike = 100 - jwRating_percent
+                pieChartData = pd.DataFrame({"values":["Like", "Dislike"], "category": [jwRating_percent, unlike]})
+                fig = px.pie(pieChartData, values="category", names="values", hole=0.5, color_discrete_sequence=['#4CAF50', '#FF5722'])
+
+                with cols_metric[0]:
+                    st.metric("⭐ JustWatch", f"{jwRating_percent}%")
+                    st.plotly_chart(fig, use_container_width=True)
+            except ValueError:
+                with cols_metric[0]:
+                    st.info("JustWatch Rating tidak valid.")
+        else:
+             with cols_metric[0]:
+               st.info("JustWatch Rating tidak tersedia.")
+            
+        # Rotten Tomatoes (Kolom 2)
+        if tomatometer:
+            try:
+                tomatometer_val = float(tomatometer)
+                with cols_metric[1]:
+                    st.metric("🍅 RottenTomatoes", f"{tomatometer_val}%")
+            except ValueError:
+                with cols_metric[1]:
+                    st.info("RottenTomatoes Rating tidak valid.")
+        else:
+            with cols_metric[1]:
+               st.info("RottenTomatoes Rating tidak tersedia.")
+        
+        # Durasi Film Terpilih & Grafik Perbandingan Durasi (Kolom 3)
+        current_runtime_val = 0
+        with cols_metric[2]:
+            if runtime:
+                try:
+                    current_runtime_val = float(runtime)
+                    st.metric("⏱ Durasi Film Ini", f"{current_runtime_val} min")
+                except ValueError:
+                    pass
+            
+            available_movies = (
+                st.session_state.search_results + 
+                st.session_state.imported_data
+            )
+            average_runtime = get_average_runtime(available_movies)
+
+            if current_runtime_val > 0 and average_runtime > 0:
+                durasi_data = pd.DataFrame({
+                    "Kategori": ["Film Ini", "Rata-rata"],
+                    "Durasi": [current_runtime_val, average_runtime]
+                })
+
+                fig_durasi_comp = px.bar(
+                    durasi_data,
+                    x="Kategori",
+                    y="Durasi",
+                    color="Kategori",
+                    color_discrete_map={
+                        "Film Ini": "#2196F3", 
+                        "Rata-rata": "#FFC107"
+                    },
+                    text_auto=True,
+                    title="Durasi (menit)"
+                )
+                fig_durasi_comp.update_layout(
+                    showlegend=False, 
+                    margin=dict(t=50, b=0, l=0, r=0), 
+                    height=250 
+                ) 
+                fig_durasi_comp.update_traces(marker_line_width=0)
+                st.plotly_chart(fig_durasi_comp, use_container_width=True)
+            else:
+                st.info("Data durasi atau rata-rata tidak tersedia.")
+        
+        link = movie.get("link")
+        if link:
+            st.markdown(f"[🔗 Lihat detail lengkap di JustWatch]({link})")
+            
+    # --- BAGIAN 2: REKOMENDASI DUMMY ---
+    st.markdown("---")
+    st.header(f"🤖 Karena kamu melihat '{movie.get('title')}'")
+    st.caption("Berikut adalah rekomendasi film serupa (Data Dummy):")
+
+    recommendations = get_movie_recommendations(current_title)
+    
+    if recommendations:
+        cols_per_row = 3
+        rows = [recommendations[i:i + cols_per_row] for i in range(0, len(recommendations), cols_per_row)]
+
+        for row in rows:
+            cols = st.columns(cols_per_row)
+            for idx, rec in enumerate(row):
+                with cols[idx]:
+                    with st.container(border=True):
+                        img_url = rec.get("image_url")
+                        if img_url and img_url.startswith("http"):
+                            try:
+                                st.image(img_url, use_container_width=True)
+                            except:
+                                st.image("https://upload.wikimedia.org/wikipedia/commons/6/65/No-Image-Placeholder.svg", use_container_width=True)
+                        else:
+                             st.image("https://via.placeholder.com/300x450?text=No+Image", use_container_width=True)
+                        
+                        st.markdown(f"**{rec.get('judul_film')}**")
+                        st.caption(f"⭐ Rating Dummy: {rec.get('imdb_rating')}")
+    else:
+        st.info("Tidak ada rekomendasi yang ditemukan.")
+
+    st.markdown("---")
+    
+    # --- BAGIAN 3: GRAFIK PERBANDINGAN RATING DAN DURASI (BAR CHART) ---
+    st.header("📊 Perbandingan Film dari Rating & Durasi")
+    st.caption("Bandingkan film ini dengan film lain dari hasil pencarian/import.")
+    
+    available_movies_for_comparison = (
+        st.session_state.search_results + 
+        st.session_state.imported_data +
+        # Termasuk hasil dari AI (jika ada)
+        fetch_movies_from_ai(st.session_state.get("last_ai_query", "Top Action Movies")) 
+    )
+    
+    current_movie_title = movie.get("title")
+    if not any(m.get("title") == current_movie_title for m in available_movies_for_comparison):
+        available_movies_for_comparison.append(movie) 
+
+    unique_movies_map = {}
+    for m in available_movies_for_comparison:
+        title = m.get("title")
+        if title and title not in unique_movies_map:
+            unique_movies_map[title] = m
+    
+    comparison_data_list = list(unique_movies_map.values())
+    
+    movie_dict = {m.get("title"): m for m in comparison_data_list}
+    movie_titles = list(movie_dict.keys())
+
+    options_for_select = [title for title in movie_titles if title != current_movie_title]
+        
+    selected_titles = st.multiselect(
+        "Pilih film lain untuk perbandingan (maksimal 3 film tambahan)",
+        options=options_for_select,
+        default=st.session_state.selected_comparison_movies,
+        max_selections=3,
+        key="comparison_selector"
+    )
+
+    final_comparison_titles = [current_movie_title] + selected_titles
+
+    if not final_comparison_titles:
+        st.info("Pilih film lain untuk melihat perbandingan.")
+        return
+
+    st.session_state.selected_comparison_movies = selected_titles
+    
+    data_for_df = []
+    skipped_titles = [] 
+    
+    for title in final_comparison_titles:
+        m = movie_dict.get(title)
+        if m:
+            runtime_val = 0
+            try:
+                runtime_val = float(m.get("runtime") or 0)
+            except (ValueError, TypeError):
+                runtime_val = 0
+            
+            rating_val = 0
+            try:
+                rating_val = float(m.get("jwRating") or 0) * 100
+            except (ValueError, TypeError):
+                pass
+            
+            if rating_val == 0:
+                 try:
+                     rating_val = float(m.get("tomatometer") or 0)
+                 except (ValueError, TypeError):
+                     rating_val = 0
+
+            
+            if runtime_val > 0 or rating_val > 0:
+                 data_for_df.append({
+                     "Film": title,
+                     "Durasi (menit)": runtime_val,
+                     "Rating (%)": rating_val,
+                     "Kategori": "Film Ini" if title == current_movie_title else "Perbandingan"
+                    })
+            else:
+                 skipped_titles.append(title)
+
+
+    if skipped_titles:
+        st.warning(f"⚠️ Film berikut dilewati dari grafik karena data rating dan durasi tidak tersedia (0): **{', '.join(skipped_titles)}**")
+
+    if not data_for_df:
+        st.error("Data perbandingan tidak valid atau semua film yang dipilih tidak memiliki data rating/durasi.")
+        return
+        
+    df = pd.DataFrame(data_for_df)
+    
+    col_durasi, col_rating = st.columns(2)
+    
+    # Grafik Batang untuk Durasi
+    with col_durasi:
+        st.subheader("⏱ Perbandingan Durasi Film")
+        fig_durasi = px.bar(
+            df, 
+            x="Film", 
+            y="Durasi (menit)",
+            color="Kategori", 
+            color_discrete_map={
+                "Film Ini": "#2196F3",
+                "Perbandingan": "#FFC107"
+            },
+            title="Durasi (menit)"
+        )
+        fig_durasi.update_layout(showlegend=False) 
+        st.plotly_chart(fig_durasi, use_container_width=True)
+
+    # Grafik Batang untuk Rating
+    with col_rating:
+        st.subheader("⭐ Perbandingan Rating Film")
+        fig_rating = px.bar(
+            df, 
+            x="Film", 
+            y="Rating (%)", 
+            color="Kategori", 
+            color_discrete_map={
+                "Film Ini": "#2196F3",
+                "Perbandingan": "#FFC107"
+            },
+            title="Rating (%) (JustWatch/RottenTomatoes)",
+            range_y=[0, 100] 
+        )
+        fig_rating.update_layout(showlegend=False)
+        st.plotly_chart(fig_rating, use_container_width=True)
+    
+    st.markdown("---")
+
+
+def show_search_page():
+    
+    def fetch_movies(query: str, timeout=8):
+        """Ambil data film dari API"""
+        if not query: return []
+        q = quote_plus(query)
+        url = f"https://imdb.iamidiotareyoutoo.com/justwatch?q={q}" 
+        try:
+            resp = requests.get(url, timeout=timeout)
+            resp.raise_for_status() 
+            data = resp.json()
+            results = []
+            if isinstance(data, list): results = data
+            elif isinstance(data, dict):
+                if "description" in data and isinstance(data["description"], list): results = data["description"]
+                elif "data" in data: results = data["data"]
+                else: results = [data] 
+            
+            normalized = []
+            for item in results:
+                if not isinstance(item, dict): continue
+                poster = item.get("poster") or item.get("poster_url") or item.get("photo_url")
+                if isinstance(poster, list) and poster: poster = poster[0]
+                if not poster: poster = ""
+                
+                normalized.append({
+                    "title": item.get("title", "No Title"),
+                    "year": item.get("year", ""),
+                    "runtime": item.get("runtime", ""),
+                    "jwRating": item.get("jwRating", ""),
+                    "tomatometer": item.get("tomatometer", ""),
+                    "poster": poster,
+                    "overview": item.get("overview") or item.get("short_description") or "",
+                    "link": item.get("url", "")
+                })
+            unique_results = []
+            seen_titles = set()
+            for item in normalized:
+                if item["title"] not in seen_titles:
+                    unique_results.append(item)
+                    seen_titles.add(item["title"])
+                    
+            return unique_results
+
+        except requests.exceptions.RequestException as e:
+            return {"_error": f"Gagal mengambil data dari JustWatch API: {str(e)}"}
+        except Exception as e:
+            return {"_error": f"Kesalahan parsing atau lainnya: {str(e)}"}
+
+    if st.button("← Kembali ke Beranda"):
+        st.session_state.page = "start"
+        st.rerun()
+    
+    st.title("🔍 Pencarian Film")
+    st.markdown("---")
+
+    if st.session_state.search_history:
+        with st.expander("📚 History Pencarian Terakhir"):
+            hist_cols = st.columns(3)
+            for idx, hist in enumerate(reversed(st.session_state.search_history[-3:])):
+                if idx < 3:
+                    with hist_cols[idx]:
+                        if st.button(f"🔍 {hist}", use_container_width=True, key=f"hist_btn_{idx}"):
+                            st.session_state["last_query"] = hist
+                            st.rerun()
+
+    col1, col2 = st.columns([3,1])
+    with col1:
+        initial_value = st.session_state.get("last_query", "")
+        search_query = st.text_input("Nama film", value=initial_value, placeholder="Misal: Avatar, Avengers")
+    with col2:
+        st.write("") 
+        st.write("")
+        search_button = st.button("Cari Film", type="primary", use_container_width=True)
+
+    if search_button or (search_query and search_query != st.session_state.get("last_executed_query")):
+        st.session_state["last_executed_query"] = search_query 
+        st.session_state["last_query"] = search_query
+        
+        if search_query not in st.session_state.search_history and search_query:
+            st.session_state.search_history.append(search_query)
+
+        with st.spinner("Mencari film..."):
+            results = fetch_movies(search_query)
+        
+        st.session_state.search_results = results 
+
+    results = st.session_state.search_results
+    
+    if isinstance(results, dict) and "_error" in results:
+        st.error(f"Error: {results['_error']}")
+    elif isinstance(results, list) and results:
+        st.success(f"Ditemukan {len(results)} film.")
+        
+        with st.expander("📤 Export Hasil Pencarian"):
+            col_json, col_csv = st.columns(2)
+            json_str = json.dumps(results, indent=2)
+            col_json.download_button("Download JSON", data=json_str, file_name=f"hasil_{st.session_state.get('last_query', 'pencarian')}.json", mime="application/json")
+            
+            csv_buffer = StringIO()
+            if results:
+                all_keys = set()
+                for item in results:
+                    all_keys.update(item.keys())
+                
+                writer = csv.DictWriter(csv_buffer, fieldnames=list(all_keys))
+                writer.writeheader()
+                writer.writerows(results)
+                col_csv.download_button("Download CSV", data=csv_buffer.getvalue(), file_name=f"hasil_{st.session_state.get('last_query', 'pencarian')}.csv", mime="text/csv")
+
+        cards_per_row = 3
+        for i in range(0, len(results), cards_per_row):
+            row = results[i:i+cards_per_row]
+            cols = st.columns(cards_per_row)
+
+            for idx, item in enumerate(row):
+                with cols[idx]:
+                    with st.container(border=True):
+                        poster = item.get("poster")
+                        if poster:
+                            try:
+                                st.image(poster, use_container_width=True)
+                            except:
+                                st.image("https://via.placeholder.com/300x450?text=No+Image", use_container_width=True)
+                        else:
+                             st.image("https://via.placeholder.com/300x450?text=No+Image", use_container_width=True)
+                        
+                        st.subheader(f"{item.get('title')}")
+                        st.caption(f"Tahun: {item.get('year')}")
+                        
+                        btn_key = f"detail_{i}{idx}{item.get('title')}"
+                        if st.button("Lihat Detail & Rekomendasi", key=btn_key, use_container_width=True, type="primary"):
+                            st.session_state.selected_movie = item
+                            st.session_state.selected_comparison_movies = [] 
+                            st.session_state.page = "detail"
+                            st.rerun()
+
+# =================ROUTING UTAMA=================
+if st.session_state.page == "start":
+    show_start_page()
+elif st.session_state.page == "import_view":
+    show_import_view()
+elif st.session_state.page == "detail":
+    show_movie_detail()
+elif st.session_state.page == "ai_search_results":
+    show_ai_search_results()
+else:
+    show_search_page()
