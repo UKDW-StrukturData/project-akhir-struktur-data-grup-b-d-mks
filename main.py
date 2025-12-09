@@ -107,8 +107,6 @@ def get_movie_description(movie_title: str):
     except Exception:
         return None
     
-# FUNGSI get_imdb_rating DIHAPUS SESUAI PERMINTAAN
-
 # =================HALAMAN-HALAMAN=================
 
 def show_start_page():
@@ -236,7 +234,7 @@ def show_import_view():
                 st.subheader(item.get("title", "Tanpa Judul"))
                 st.write(item.get("overview", ""))
 
-# === LOGIKA UTAMA DETAIL DAN REKOMENDASI DENGAN GRAFIK BARU ===
+# === LOGIKA UTAMA DETAIL DAN REKOMENDASI DENGAN GRAFIK BATANG ===
 def show_movie_detail():
     """
     Halaman ini muncul SETELAH user menekan tombol 'Lihat Detail & Rekomendasi'.
@@ -313,7 +311,7 @@ def show_movie_detail():
         # Gunakan JustWatch Rating
         if jwRating:
             try:
-                # KOREKSI MATEMATIS: JustWatch rating (0-1) dikalikan 100, BUKAN 1000.
+                # JustWatch rating (0-1) dikalikan 100
                 jwRating_percent = math.ceil(float(jwRating) * 100) 
                 unlike = 100 - jwRating_percent
                 pieChartData = pd.DataFrame({"values":["Like", "Dislike"], "category": [jwRating_percent, unlike]})
@@ -388,11 +386,11 @@ def show_movie_detail():
     st.markdown("---")
     
     # =========================================================================
-    # --- BAGIAN 3: GRAFIK PERBANDINGAN RATING DAN DURASI DENGAN FILM LAIN ---
+    # --- BAGIAN 3: GRAFIK PERBANDINGAN RATING DAN DURASI (BAR CHART) ---
     # =========================================================================
     
-    st.header("Perbandingan Film dari Rating & Durasi")
-    st.caption("Bandingkan film ini dengan 3 film lain dari hasil pencarian/import.")
+    st.header("📊 Perbandingan Film dari Rating & Durasi")
+    st.caption("Bandingkan film ini dengan film lain dari hasil pencarian/import.")
     
     # Gabungkan semua data film yang tersedia untuk perbandingan
     available_movies = (
@@ -403,14 +401,14 @@ def show_movie_detail():
     # Tambahkan film yang sedang dilihat (jika belum ada)
     current_movie_title = movie.get("title")
     if not any(m.get("title") == current_movie_title for m in available_movies):
-         available_movies.append(movie) 
+          available_movies.append(movie) 
 
     # Hilangkan duplikat berdasarkan judul dan film tanpa judul
     unique_movies_map = {}
     for m in available_movies:
         title = m.get("title")
         if title and title not in unique_movies_map:
-             unique_movies_map[title] = m
+              unique_movies_map[title] = m
     
     comparison_data_list = list(unique_movies_map.values())
     
@@ -426,7 +424,7 @@ def show_movie_detail():
 
     # Multiselect untuk memilih 3 film
     selected_titles = st.multiselect(
-        "Pilih 3 film yang serupa untuk perbandingan (maksimal 3 film)",
+        "Pilih film lain untuk perbandingan (maksimal 3 film tambahan)",
         options=options_for_select,
         default=st.session_state.selected_comparison_movies,
         max_selections=3,
@@ -445,7 +443,7 @@ def show_movie_detail():
     
     # Siapkan DataFrame untuk Plotly
     data_for_df = []
-    skipped_titles = [] # Tambahkan list untuk film yang di-skip
+    skipped_titles = [] 
     
     for title in final_comparison_titles:
         m = movie_dict.get(title)
@@ -465,23 +463,20 @@ def show_movie_detail():
                 pass
             
             if rating_val == 0:
-                 try:
-                    # Tomatometer (%)
-                    rating_val = float(m.get("tomatometer") or 0)
-                 except (ValueError, TypeError):
-                    rating_val = 0
+                  try:
+                      # Tomatometer (%)
+                      rating_val = float(m.get("tomatometer") or 0)
+                  except (ValueError, TypeError):
+                      rating_val = 0
 
-            # KOREKSI PENTING: Hapus perkalian rating_val * 10 di sini!
-            # Dan tambahkan filter untuk film dengan data 0
             
             if runtime_val > 0 or rating_val > 0:
-                 data_for_df.append({
-                    "Film": title,
-                    "Durasi (menit)": runtime_val,
-                    "Rating (%)": rating_val,
-                 })
+                  data_for_df.append({
+                      "Film": title,
+                      "Durasi (menit)": runtime_val,
+                      "Rating (%)": rating_val,
+                   })
             else:
-                # Jika Durasi dan Rating sama-sama 0, skip dan beri peringatan
                 skipped_titles.append(title)
 
 
@@ -494,28 +489,36 @@ def show_movie_detail():
         
     df = pd.DataFrame(data_for_df)
     
-    # Transpose data untuk Line Chart yang membandingkan Metrik
-    df_melted = pd.melt(
-        df, 
-        id_vars='Film', 
-        value_vars=['Durasi (menit)', 'Rating (%)'], 
-        var_name='Metrik', 
-        value_name='Nilai'
-    )
+    # IMPLEMENTASI BAR CHART DENGAN 2 KOLOM
     
-    # Buat Line Chart
-    fig_comp = px.line(
-        df_melted, 
-        x="Metrik", 
-        y="Nilai", 
-        color="Film", 
-        markers=True,
-        title="Perbandingan Rating dan Durasi Film"
-    )
+    col_durasi, col_rating = st.columns(2)
     
-    fig_comp.update_layout(yaxis_title="Nilai (Durasi dalam menit, Rating dalam %)")
-    
-    st.plotly_chart(fig_comp, use_container_width=True)
+    # Grafik Batang untuk Durasi
+    with col_durasi:
+        st.subheader("⏱ Perbandingan Durasi Film")
+        fig_durasi = px.bar(
+            df, 
+            x="Film", 
+            y="Durasi (menit)",
+            color="Film", 
+            title="Durasi (menit)"
+        )
+        fig_durasi.update_layout(showlegend=False) 
+        st.plotly_chart(fig_durasi, use_container_width=True)
+
+    # Grafik Batang untuk Rating
+    with col_rating:
+        st.subheader("⭐ Perbandingan Rating Film")
+        fig_rating = px.bar(
+            df, 
+            x="Film", 
+            y="Rating (%)", 
+            color="Film", 
+            title="Rating (%) (JustWatch/RottenTomatoes)",
+            range_y=[0, 100] 
+        )
+        fig_rating.update_layout(showlegend=False)
+        st.plotly_chart(fig_rating, use_container_width=True)
     
     st.markdown("---")
 
@@ -527,6 +530,7 @@ def show_search_page():
         """Ambil data film dari API"""
         if not query: return []
         q = quote_plus(query)
+        # Menggunakan API Key yang sudah dimodifikasi
         url = f"https://imdb.iamidiotareyoutoo.com/justwatch?q={q}" 
         try:
             resp = requests.get(url, timeout=timeout)
