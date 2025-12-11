@@ -455,12 +455,16 @@ def show_movie_detail():
         if not streaming_offers:
             st.info("Tidak ada data streaming yang tersedia dari API IMDB.")
         else:
-        # Hilangkan duplikat berdasarkan URL
-        unique = {}
-        for item in streaming_offers:
-            url = item.get("url")
-            if url and url not in unique:
-                unique[url] = item
+            unique = {}
+            for item in streaming_offers:
+                url = item.get("url")
+                if url and url not in unique:
+                    unique[url] = item
+                    
+            for item in unique.values():
+                nama = item.get("name", "-")
+                tipe = item.get("type", "-").replace("_", "")
+                link = item.get("url", "#")
             
     # --- BAGIAN 2: REKOMENDASI AI ---
     st.markdown("---")
