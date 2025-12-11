@@ -424,7 +424,9 @@ def show_movie_detail():
                 st.info("Data durasi atau rata-rata tidak tersedia.")
                 
         #link streaming berdasarkan
-        
+        title = movie.get("title") or movie.get("originalTitle") or ""
+        year = movie.get("year") or ""
+        st.header(f"{title} ({year})")
             
     # --- BAGIAN 2: REKOMENDASI AI ---
     st.markdown("---")
