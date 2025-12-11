@@ -460,11 +460,37 @@ def show_movie_detail():
                 url = item.get("url")
                 if url and url not in unique:
                     unique[url] = item
-                    
+
             for item in unique.values():
                 nama = item.get("name", "-")
                 tipe = item.get("type", "-").replace("_", "")
                 link = item.get("url", "#")
+                with st.container():
+                    st.markdown(
+                        f"""
+                        <div style="
+                            padding: 15px;
+                            border-radius: 12px;
+                            background: #111111;
+                            border: 1px solid #333;
+                            margin-bottom: 10px;
+                        ">
+                            <h3 style="margin: 0; color: white;">{nama}</h3>
+                            <p style="margin: 0; color: #cccccc;">📌 {tipe}</p>
+                            <a href="{link}" target="_blank" style="
+                                display: inline-block;
+                                margin-top: 8px;
+                                padding: 8px 12px;
+                                background: #FF9900;
+                                border-radius: 8px;
+                                color: black;
+                                font-weight: bold;
+                                text-decoration: none;
+                            ">🔗 Tonton di sini</a>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
             
     # --- BAGIAN 2: REKOMENDASI AI ---
     st.markdown("---")
