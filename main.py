@@ -424,6 +424,12 @@ def show_movie_detail():
                 st.info("Data durasi atau rata-rata tidak tersedia.")
                 
         #link streaming berdasarkan imbd
+
+        jwRating = movie.get("jwRating")
+        tomatometer = movie.get("tomatometer")
+        runtime = movie.get("runtime")
+        cols_metric = st.columns(3) 
+
             
     # --- BAGIAN 2: REKOMENDASI AI ---
     st.markdown("---")
