@@ -423,7 +423,7 @@ def show_movie_detail():
             else:
                 st.info("Data durasi atau rata-rata tidak tersedia.")
                 
-        #link streaming
+        #link streaming berdasarkan imbd
             
     # --- BAGIAN 2: REKOMENDASI AI ---
     st.markdown("---")
