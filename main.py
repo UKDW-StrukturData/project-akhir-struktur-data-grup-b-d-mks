@@ -448,6 +448,10 @@ def show_movie_detail():
                 return []
         judul_film = title
         streaming_offers = get_streaming_links_from_imdb(judul_film)
+        
+        st.markdown("---")
+        st.subheader("🎥 Tempat Menonton Film Ini")
+
 
             
     # --- BAGIAN 2: REKOMENDASI AI ---
