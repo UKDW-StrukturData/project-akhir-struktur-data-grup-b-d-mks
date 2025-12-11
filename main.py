@@ -427,6 +427,25 @@ def show_movie_detail():
         title = movie.get("title") or movie.get("originalTitle") or ""
         year = movie.get("year") or ""
         st.header(f"{title} ({year})")
+
+        def get_streaming_links_from_imdb(judul):
+            try:
+                q = requests.utils.quote(judul)
+                url = f"https://imdb.iamidiotareyoutoo.com/justwatch?q={q}"
+    
+                resp = requests.get(url, timeout=10).json()
+                if not resp.get("ok"):
+                    return []
+    
+                des = resp.get("description", [])
+                if len(des) == 0:
+                    return []
+    
+                # ambil film pertama yang paling relevan
+                return des[0].get("offers", [])
+    
+            except Exception:
+                return []
             
     # --- BAGIAN 2: REKOMENDASI AI ---
     st.markdown("---")
