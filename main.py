@@ -13,10 +13,8 @@ from datetime import datetime
 
 
 # =================KONFIGURASI=================
-# Masukkan API KEY Gemini kamu di sini
-# PERHATIAN: Saya mengganti API Key di sini dengan placeholder 'GANTI_DENGAN_API_KEY_DISINI'
-# Anda harus menggantinya kembali dengan API Key yang valid.
-GEMINI_API_KEY = "AIzaSyAw9kB2D3FVfA6jU-FU7tZrjWhvdpFc71Q" 
+
+GEMINI_API_KEY = "AIzaSyBTpIRX_QHvCPgb6pQQOOvns10JYR-Av-0" 
 
 st.set_page_config(page_title="Cari Film & Rekomendasi AI", layout="wide", page_icon="🎬")
 
@@ -78,7 +76,7 @@ def get_movie_recommendations(movie_title: str):
     """
     Meminta rekomendasi film serupa dari Gemini API dalam format JSON.
     """
-    # Menggunakan GEMINI_API_KEY dari kode yang Anda berikan
+    # Menggunakan GEMINI_API_KEY dari kode yang diberikan
     if not GEMINI_API_KEY or GEMINI_API_KEY == "GANTI_DENGAN_API_KEY_DISINI":
         return {"error": "API Key Gemini belum diatur atau masih default."}
 
@@ -115,7 +113,7 @@ def get_movie_description(movie_title: str):
     """
     Meminta Gemini untuk membuat deskripsi singkat tentang film jika data API kosong.
     """
-    # Menggunakan GEMINI_API_KEY dari kode yang Anda berikan
+    # Menggunakan GEMINI_API_KEY dari kode yang diberikan
     if not GEMINI_API_KEY or GEMINI_API_KEY == "GANTI_DENGAN_API_KEY_DISINI":
         return None
 
@@ -471,7 +469,7 @@ def show_movie_detail():
                         <div style="
                             padding: 15px;
                             border-radius: 12px;
-                            background: #111111;
+                            background: #ffffff;
                             border: 1px solid #333;
                             margin-bottom: 10px;
                         ">
@@ -481,7 +479,7 @@ def show_movie_detail():
                                 display: inline-block;
                                 margin-top: 8px;
                                 padding: 8px 12px;
-                                background: #FF9900;
+                                background: #11111;
                                 border-radius: 8px;
                                 color: black;
                                 font-weight: bold;
