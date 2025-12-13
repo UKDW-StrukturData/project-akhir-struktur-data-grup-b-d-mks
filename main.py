@@ -469,7 +469,7 @@ def show_movie_detail():
                         <div style="
                             padding: 15px;
                             border-radius: 12px;
-                            background: #ffffff;
+                            background: #cccccc;
                             border: 1px solid #333;
                             margin-bottom: 10px;
                         ">
