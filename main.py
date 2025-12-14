@@ -730,7 +730,7 @@ def show_search_page():
             for idx, hist in enumerate(reversed(st.session_state.search_history[-3:])):
                 if idx < 3:
                     with hist_cols[idx]:
-                        if st.button(f"🔍 {hist}", use_container_width=True, key=f"hist_btn_{idx}"):
+                        if st.button(f"{hist}", use_container_width=True, key=f"hist_btn_{idx}"):
                             st.session_state["last_query"] = hist
                             st.rerun()
 
