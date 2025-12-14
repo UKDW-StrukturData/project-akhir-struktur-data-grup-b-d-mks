@@ -136,7 +136,7 @@ def get_movie_description(movie_title: str):
 # =================HALAMAN-HALAMAN=================
 
 def show_start_page():
-    st.title("🎬 Pencarian Film")
+    st.title("Pencarian Film")
     st.markdown("Cari info film lengkap dengan sekali klik!")
     
     # Tampilkan film populer
