@@ -534,9 +534,7 @@ def show_movie_detail():
 
     st.markdown("---")
     
-    # =========================================================================
     # --- BAGIAN 3: GRAFIK PERBANDINGAN RATING DAN DURASI (BAR CHART) ---
-    # =========================================================================
     
     st.header("📊 Perbandingan Film dari Rating & Durasi")
     st.caption("Bandingkan film ini dengan film lain dari hasil pencarian/import.")
