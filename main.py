@@ -252,7 +252,7 @@ def show_import_view():
         st.warning("Tidak ada data yang diimport")
         return
     
-    st.success(f"🎉 Berhasil mengimport {len(imported_data)} film!")
+    st.success(f"Berhasil mengimport {len(imported_data)} film!")
     
     for i, item in enumerate(imported_data):
         with st.container(border=True):
