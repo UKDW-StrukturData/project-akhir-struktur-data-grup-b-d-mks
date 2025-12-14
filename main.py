@@ -493,7 +493,7 @@ def show_movie_detail():
             
     # --- BAGIAN 2: REKOMENDASI AI ---
     st.markdown("---")
-    st.header(f"🤖 Karena kamu melihat '{movie.get('title')}'")
+    st.header(f"Karena kamu melihat '{movie.get('title')}'")
     st.caption("Berikut adalah rekomendasi film serupa berdasarkan analisis AI (IMDb Data):")
 
     # Caching untuk Rekomendasi
