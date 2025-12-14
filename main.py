@@ -366,7 +366,7 @@ def show_movie_detail():
             try:
                 tomatometer_val = float(tomatometer)
                 with cols_metric[1]:
-                    st.metric("🍅 RottenTomatoes", f"{tomatometer_val}%")
+                    st.metric("RottenTomatoes", f"{tomatometer_val}%")
             except ValueError:
                 pass 
         
