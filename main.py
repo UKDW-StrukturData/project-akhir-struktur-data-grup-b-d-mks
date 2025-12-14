@@ -444,11 +444,12 @@ def show_movie_detail():
 
             except Exception:
                 return []
+            
         judul_film = title
         streaming_offers = get_streaming_links_from_imdb(judul_film)
 
         st.markdown("---")
-        st.subheader("🎥 Tempat Menonton Film Ini")
+        st.subheader("Tempat Menonton Film Ini")
 
         if not streaming_offers:
             st.info("Tidak ada data streaming yang tersedia dari API IMDB.")
