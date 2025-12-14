@@ -352,7 +352,7 @@ def show_movie_detail():
                 fig = px.pie(pieChartData, values="category", names="values", hole=0.5, color_discrete_sequence=['#4CAF50', '#FF5722'])
 
                 with cols_metric[0]:
-                    st.metric("⭐ JustWatch", f"{jwRating_percent}%")
+                    st.metric("JustWatch", f"{jwRating_percent}%")
                     st.plotly_chart(fig, use_container_width=True)
             except ValueError:
                 with cols_metric[0]:
