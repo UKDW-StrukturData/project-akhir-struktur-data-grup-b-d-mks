@@ -725,7 +725,7 @@ def show_search_page():
 
     # HISTORY PENCARIAN
     if st.session_state.search_history:
-        with st.expander("📚 History Pencarian Terakhir"):
+        with st.expander("History Pencarian Terakhir"):
             hist_cols = st.columns(3)
             for idx, hist in enumerate(reversed(st.session_state.search_history[-3:])):
                 if idx < 3:
