@@ -643,7 +643,7 @@ def show_movie_detail():
     
     # Grafik Batang untuk Durasi
     with col_durasi:
-        st.subheader("⏱ Perbandingan Durasi Film")
+        st.subheader("Perbandingan Durasi Film")
         fig_durasi = px.bar(
             df, 
             x="Film", 
