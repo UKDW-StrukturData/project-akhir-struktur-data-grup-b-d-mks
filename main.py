@@ -381,9 +381,6 @@ def show_movie_detail():
                 except ValueError:
                     pass
             
-            # Subheader untuk Grafik Durasi Perbandingan
-            # st.subheader("Vs Rata-rata") # Dihilangkan karena title grafik sudah cukup
-            
             # Dapatkan semua film yang tersedia (hasil pencarian + import)
             available_movies = (
                 st.session_state.search_results + 
