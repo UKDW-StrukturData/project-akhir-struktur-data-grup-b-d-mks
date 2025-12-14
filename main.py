@@ -528,7 +528,7 @@ def show_movie_detail():
                              st.image("https://via.placeholder.com/300x450?text=No+Image", use_container_width=True)
                         
                         st.markdown(f"**{rec.get('judul_film')}**")
-                        st.caption(f"⭐ IMDb: {rec.get('imdb_rating')}")
+                        st.caption(f"IMDb: {rec.get('imdb_rating')}")
     else:
         st.info("Tidak ada rekomendasi yang ditemukan.")
 
