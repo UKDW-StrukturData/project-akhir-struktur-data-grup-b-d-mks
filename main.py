@@ -720,7 +720,7 @@ def show_search_page():
         st.session_state.page = "start"
         st.rerun()
     
-    st.title("🔍 Pencarian Film")
+    st.title("Pencarian Film")
     st.markdown("---")
 
     # HISTORY PENCARIAN
