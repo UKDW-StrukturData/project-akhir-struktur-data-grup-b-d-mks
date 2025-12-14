@@ -656,7 +656,7 @@ def show_movie_detail():
 
     # Grafik Batang untuk Rating
     with col_rating:
-        st.subheader("⭐ Perbandingan Rating Film")
+        st.subheader("Perbandingan Rating Film")
         fig_rating = px.bar(
             df, 
             x="Film", 
