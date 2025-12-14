@@ -629,7 +629,7 @@ def show_movie_detail():
 
 
     if skipped_titles:
-        st.warning(f"⚠️ Film berikut dilewati dari grafik karena data rating dan durasi tidak tersedia (0): **{', '.join(skipped_titles)}**")
+        st.warning(f"Film berikut dilewati dari grafik karena data rating dan durasi tidak tersedia (0): **{', '.join(skipped_titles)}**")
 
     if not data_for_df:
         st.error("Data perbandingan tidak valid atau semua film yang dipilih tidak memiliki data rating/durasi.")
