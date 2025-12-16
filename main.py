@@ -124,7 +124,7 @@ def get_movie_description(movie_title: str):
         model = genai.GenerativeModel('gemini-2.5-flash')
 
         prompt = f"""
-        Tugas: Berikan deskripsi plot atau sebuah sipnosis yang singkat dan menarik (maksimal 5 paragraf) untuk film '{movie_title}'. Fokus pada premis utama tanpa membocorkan akhir cerita (spoiler).
+        Tugas: Berikan deskripsi plot atau sebuah sipnosis yang singkat dan menarik (maksimal 1 paragraf) untuk film '{movie_title}'. Fokus pada premis utama tanpa membocorkan akhir cerita (spoiler).
         """
 
         response = model.generate_content(prompt)
