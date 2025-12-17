@@ -14,7 +14,7 @@ from datetime import datetime
 
 # =================KONFIGURASI=================
 
-GEMINI_API_KEY = "AIzaSyBvw3CJBn8SmY9kyJdrtVe7py6fb7iPS4s" 
+GEMINI_API_KEY = st.secrets["APIKEY"] 
 
 st.set_page_config(page_title="Cari Film & Rekomendasi AI", layout="wide", page_icon="🎬")
 
